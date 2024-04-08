@@ -10,6 +10,8 @@ public class Usuario {
     private String nombre;
     private String pword;
 
+    private String perfil;
+
     @OneToMany(mappedBy = "usuarioSeguido")
     private List<UsuariosSeguidos> seguidos;
 
@@ -26,6 +28,12 @@ public class Usuario {
         this.pword = pword;
     }
 
+    public Usuario(String nombre, String pword, String perfil) {
+        this.nombre = nombre;
+        this.pword = pword;
+        this.perfil = perfil;
+    }
+
     public String getNombre() {
         return nombre;
     }
@@ -40,6 +48,14 @@ public class Usuario {
 
     public void setPword(String pword) {
         this.pword = pword;
+    }
+
+    public String getPerfil() {
+        return perfil;
+    }
+
+    public void setPerfil(String perfil) {
+        this.perfil = perfil;
     }
 
     @Override

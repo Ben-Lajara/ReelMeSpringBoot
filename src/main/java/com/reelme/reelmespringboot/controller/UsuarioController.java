@@ -9,7 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @CrossOrigin(origins = "http://localhost:4200")
@@ -83,6 +88,16 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarios);
     }
 
+    @GetMapping("/usuario/{nombre}")
+    public ResponseEntity<Usuario> getUsuario(@PathVariable String nombre){
+        Usuario usuario = usuarioService.findByName(nombre);
+        if(usuario == null){
+            return ResponseEntity.notFound().build();
+        }else{
+            return ResponseEntity.ok(usuario);
+        }
+    }
+
     @GetMapping("/about/{usuario}")
     public ResponseEntity<Map<String, Object>> getAbout(@PathVariable String usuario){
         Usuario usuarioFound = usuarioService.findByName(usuario);
@@ -108,4 +123,67 @@ public class UsuarioController {
         }
     }
 
+    private final String UPLOAD_DIR = "src/main/resources/static/uploads/";
+
+    public void saveFile(MultipartFile file) throws IOException {
+        try{
+            System.out.println("Se ejecuta saveFile");
+            if (!file.isEmpty()) {
+                System.out.println("El archivo no está vacío");
+                byte[] bytes = file.getBytes();
+                System.out.println(bytes);
+                Path path = Paths.get(UPLOAD_DIR + file.getOriginalFilename());
+                System.out.println(path);
+                Files.write(path, bytes);
+                System.out.println("Después de Files.write");
+            }
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("nombre") String nombre){
+        try {
+            // Guarda el archivo en el sistema de archivos
+            System.out.println(nombre);
+            System.out.println(file.getOriginalFilename());
+            saveFile(file);
+            System.out.println("Después de saveFile");
+            // Actualiza el usuario con la ruta de la imagen
+            Usuario usuario = usuarioService.findByName(nombre);
+            System.out.println(usuario.getNombre());
+            usuario.setPerfil(file.getOriginalFilename());
+            usuarioService.save(usuario);
+
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (IOException e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/cambiarPword")
+    public ResponseEntity<?> editPword(@RequestBody Usuario updatedUsuario) {
+        try {
+            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
+            System.out.println(existingUsuario.getNombre());
+            if (existingUsuario != null) {
+                existingUsuario.setPword(updatedUsuario.getPword());
+                usuarioService.save(existingUsuario);
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "success");
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            } else {
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Usuario not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

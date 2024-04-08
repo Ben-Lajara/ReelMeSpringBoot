@@ -23,6 +23,7 @@ public interface ResenaRepository extends CrudRepository<Resena, Integer> {
 
     int countByNomUsuario(Usuario usuario);
 
+    List<Resena> findTop4ByNomUsuarioOrderByFechaDesc(Usuario usuario);
 
 
 }

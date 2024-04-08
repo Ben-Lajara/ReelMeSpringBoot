@@ -13,7 +13,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +44,14 @@ public class ResenaService {
 
     public int countByUsuario(Usuario usuario) {
         return resenaRepository.countByNomUsuario(usuario);
+    }
+
+    public List<Resena> findTop4ByUsuarioOrderByFechaDesc(Usuario usuario) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Resena> query = cb.createQuery(Resena.class);
+        Root<Resena> root = query.from(Resena.class);
+        query.select(root).where(cb.equal(root.get("nomUsuario"), usuario)).orderBy(cb.desc(root.get("fecha")));
+        return entityManager.createQuery(query).setMaxResults(4).getResultList();
     }
 
 

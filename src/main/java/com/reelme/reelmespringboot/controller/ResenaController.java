@@ -38,8 +38,14 @@ public class ResenaController {
             String fechaString = (String) parametros.get("fecha");
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
             Date fecha = formatter.parse(fechaString);
-            int calificacionInt = (Integer) parametros.get("calificacion");
-            float calificacion = (float) calificacionInt;
+            float calificacion = 0.0f;
+            if (parametros.get("calificacion") instanceof Integer) {
+                int calificacionInt = (Integer) parametros.get("calificacion");
+                calificacion = (float) calificacionInt;
+            } else if (parametros.get("calificacion") instanceof Double) {
+                double calificacionDouble = (Double) parametros.get("calificacion");
+                calificacion = (float) calificacionDouble;
+            }
             String comentario = (String) parametros.get("comentario");
             boolean gustado = (Boolean) parametros.get("gustado");
             String idPelicula = (String) parametros.get("id_pelicula");
@@ -175,4 +181,20 @@ public class ResenaController {
             }
         }
     }
+
+    @GetMapping("lastactivity/{usuario}")
+    public ResponseEntity<List<Resena>> getLastActivity(@PathVariable String usuario) {
+        Usuario usuarioFound = usuarioService.findByName(usuario);
+        if (usuarioFound == null) {
+            return ResponseEntity.notFound().build();
+        } else {
+            List<Resena> resenas = resenaService.findTop4ByUsuarioOrderByFechaDesc(usuarioFound);
+            if (resenas.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            } else {
+                return ResponseEntity.ok(resenas);
+            }
+        }
+    }
+
 }
