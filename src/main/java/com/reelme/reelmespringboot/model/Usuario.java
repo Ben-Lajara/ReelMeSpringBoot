@@ -12,6 +12,9 @@ public class Usuario {
 
     private String perfil;
 
+    @Enumerated(EnumType.STRING)
+    private Rango rango;
+
     @OneToMany(mappedBy = "usuarioSeguido")
     private List<UsuariosSeguidos> seguidos;
 
@@ -56,6 +59,14 @@ public class Usuario {
 
     public void setPerfil(String perfil) {
         this.perfil = perfil;
+    }
+
+    public Rango getRango() {
+        return rango;
+    }
+
+    public void setRango(Rango rango) {
+        this.rango = rango;
     }
 
     @Override

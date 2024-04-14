@@ -109,6 +109,7 @@ public class UsuarioController {
             about.put("vistas", resenaService.countByUsuario(usuarioFound));
             about.put("seguidores", usuariosSeguidosService.countByUsuarioSeguido(usuarioFound));
             about.put("seguidos", usuariosSeguidosService.countByNombreUsuario(usuarioFound));
+            about.put("rango", usuarioFound.getRango());
             return ResponseEntity.ok(about);
         }
     }
@@ -185,5 +186,12 @@ public class UsuarioController {
             response.put("message", e.getMessage());
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/numResenas/{nombre}")
+    public ResponseEntity<Integer> getNumResenas(@PathVariable String nombre){
+        Usuario usuario = usuarioService.findByName(nombre);
+        int numResenas = resenaService.countByUsuario(usuario);
+        return ResponseEntity.ok(numResenas);
     }
 }

@@ -63,6 +63,9 @@ public class ResenaController {
             System.out.println("resena: " + resena);
 
             resenaService.save(resena);
+
+            usuarioService.updateRango(nomUsuario);
+
             Map<String, String> response = new HashMap<>();
             response.put("status", "success");
             return new ResponseEntity<>(response, HttpStatus.OK);
