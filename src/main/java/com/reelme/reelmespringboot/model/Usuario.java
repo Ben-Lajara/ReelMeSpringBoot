@@ -8,6 +8,8 @@ import java.util.List;
 public class Usuario {
     @Id
     private String nombre;
+
+    private String email;
     private String pword;
 
     private String perfil;
@@ -33,6 +35,13 @@ public class Usuario {
 
     public Usuario(String nombre, String pword, String perfil) {
         this.nombre = nombre;
+        this.pword = pword;
+        this.perfil = perfil;
+    }
+
+    public Usuario(String nombre, String email, String pword, String perfil) {
+        this.nombre = nombre;
+        this.email = email;
         this.pword = pword;
         this.perfil = perfil;
     }
@@ -67,6 +76,14 @@ public class Usuario {
 
     public void setRango(Rango rango) {
         this.rango = rango;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     @Override
