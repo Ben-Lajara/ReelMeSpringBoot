@@ -47,6 +47,22 @@ public class UsuarioController {
         }
     }
 
+    @PostMapping("/loginNombreEmail")
+    public ResponseEntity<?> loginNombreEmail(@RequestParam String nombreEmail, @RequestParam String pword) {
+        Usuario existingUser = usuarioService.findByName(nombreEmail);
+        if (existingUser == null) {
+            existingUser = usuarioService.findByEmail(nombreEmail);
+        }
+        if (existingUser != null && existingUser.getPword().equals(pword)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("usuario", existingUser);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+    }
+
     @GetMapping("/seguidos/{nombre}")
     public ResponseEntity<List<Map<String, Object>>> getSeguidos(@PathVariable String nombre) {
         Usuario usuarioFound = usuarioService.findByName(nombre);
