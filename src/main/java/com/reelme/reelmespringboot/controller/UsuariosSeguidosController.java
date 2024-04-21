@@ -80,6 +80,7 @@ public class UsuariosSeguidosController {
                 Map<String, Object> resenaMap = new HashMap<>();
                 resenaMap.put("usuario", usuario.getNombre());
                 resenaMap.put("perfil", usuario.getPerfil());
+                resenaMap.put("color", usuario.getColor());
                 resenaMap.put("calificacion", resena.getCalificacion());
                 resenaMap.put("comentario", resena.getComentario());
                 resenaMap.put("gustado", resena.isGustado());

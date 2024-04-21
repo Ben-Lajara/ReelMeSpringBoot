@@ -17,6 +17,10 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     private Rango rango;
 
+    private String bio;
+
+    private String color;
+
     @OneToMany(mappedBy = "usuarioSeguido")
     private List<UsuariosSeguidos> seguidos;
 
@@ -84,6 +88,22 @@ public class Usuario {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 
     @Override

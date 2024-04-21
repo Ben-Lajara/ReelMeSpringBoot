@@ -210,4 +210,28 @@ public class UsuarioController {
         int numResenas = resenaService.countByUsuario(usuario);
         return ResponseEntity.ok(numResenas);
     }
+
+    @PutMapping("/color")
+    public ResponseEntity<?> editColor(@RequestBody Usuario updatedUsuario) {
+        try {
+            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
+            if (existingUsuario != null) {
+                existingUsuario.setColor(updatedUsuario.getColor());
+                usuarioService.save(existingUsuario);
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "success");
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            } else {
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Usuario not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
