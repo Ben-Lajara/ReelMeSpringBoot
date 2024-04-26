@@ -13,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,6 +55,9 @@ public class ResenaService {
         return entityManager.createQuery(query).setMaxResults(4).getResultList();
     }
 
+    public int countByFechaBetweenAndNomUsuario(Date dateStart, Date dateEnd, Usuario usuario) {
+        return resenaRepository.countByFechaBetweenAndNomUsuario(dateStart, dateEnd, usuario);
+    }
 
 
 }

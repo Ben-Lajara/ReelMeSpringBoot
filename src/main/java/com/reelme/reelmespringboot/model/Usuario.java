@@ -20,6 +20,9 @@ public class Usuario {
     private String bio;
 
     private String color;
+    private String apodo;
+
+    private String direccion;
 
     @OneToMany(mappedBy = "usuarioSeguido")
     private List<UsuariosSeguidos> seguidos;
@@ -104,6 +107,22 @@ public class Usuario {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public String getApodo() {
+        return apodo;
+    }
+
+    public void setApodo(String apodo) {
+        this.apodo = apodo;
+    }
+
+    public String getDireccion() {
+        return direccion;
+    }
+
+    public void setDireccion(String direccion) {
+        this.direccion = direccion;
     }
 
     @Override

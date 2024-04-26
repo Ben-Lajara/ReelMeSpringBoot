@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,9 @@ public interface ResenaRepository extends CrudRepository<Resena, Integer> {
     List<Resena> findByIdPelicula(Optional<Pelicula> idPelicula);
 
     int countByNomUsuario(Usuario usuario);
+
+    int countByFechaBetweenAndNomUsuario(Date dateStart, Date dateEnd, Usuario usuario);
+
 
     List<Resena> findTop4ByNomUsuarioOrderByFechaDesc(Usuario usuario);
 

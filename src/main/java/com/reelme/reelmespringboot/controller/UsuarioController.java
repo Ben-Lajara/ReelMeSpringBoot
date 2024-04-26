@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.Year;
 import java.util.*;
 
 @CrossOrigin(origins = "http://localhost:4200")
@@ -120,9 +122,21 @@ public class UsuarioController {
         if(usuarioFound == null){
             return ResponseEntity.notFound().build();
         }else{
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_YEAR, 1);
+            Date start = calendar.getTime();
+
+            calendar.set(Calendar.DAY_OF_YEAR, calendar.getActualMaximum(Calendar.DAY_OF_YEAR));
+            Date end = calendar.getTime();
             Map<String, Object> about = new HashMap<>();
             about.put("nombre", usuarioFound.getNombre());
+            about.put("apodo", usuarioFound.getApodo());
+            about.put("direccion", usuarioFound.getDireccion());
+            about.put("perfil", usuarioFound.getPerfil());
+            about.put("color", usuarioFound.getColor());
+            about.put("bio", usuarioFound.getBio());
             about.put("vistas", resenaService.countByUsuario(usuarioFound));
+            about.put("vistasYear", resenaService.countByFechaBetweenAndNomUsuario(start, end, usuarioFound));
             about.put("seguidores", usuariosSeguidosService.countByUsuarioSeguido(usuarioFound));
             about.put("seguidos", usuariosSeguidosService.countByNombreUsuario(usuarioFound));
             about.put("rango", usuarioFound.getRango());
@@ -217,6 +231,58 @@ public class UsuarioController {
             Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
             if (existingUsuario != null) {
                 existingUsuario.setColor(updatedUsuario.getColor());
+                usuarioService.save(existingUsuario);
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "success");
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            } else {
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Usuario not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/bio")
+    public ResponseEntity<?> editBio(@RequestBody Usuario updatedUsuario) {
+        try {
+            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
+            if (existingUsuario != null) {
+                existingUsuario.setBio(updatedUsuario.getBio());
+                usuarioService.save(existingUsuario);
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "success");
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            } else {
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", "Usuario not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/usuario")
+    public ResponseEntity<?> editUsuario(@RequestBody Usuario updatedUsuario){
+        try {
+            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
+            if (existingUsuario != null) {
+                existingUsuario.setEmail(updatedUsuario.getEmail());
+                existingUsuario.setPerfil(updatedUsuario.getPerfil());
+                existingUsuario.setBio(updatedUsuario.getBio());
+                existingUsuario.setApodo(updatedUsuario.getApodo());
+                existingUsuario.setDireccion(updatedUsuario.getDireccion());
                 usuarioService.save(existingUsuario);
                 Map<String, String> response = new HashMap<>();
                 response.put("status", "success");
