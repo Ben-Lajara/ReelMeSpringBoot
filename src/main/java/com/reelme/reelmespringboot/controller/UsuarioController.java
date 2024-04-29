@@ -5,6 +5,7 @@ import com.reelme.reelmespringboot.repository.UsuariosSeguidosRepository;
 import com.reelme.reelmespringboot.service.ResenaService;
 import com.reelme.reelmespringboot.service.UsuarioService;
 import com.reelme.reelmespringboot.service.UsuariosSeguidosService;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,8 +32,11 @@ public class UsuarioController {
     @Autowired
     private ResenaService resenaService;
 
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Usuario usuario) {
+        String pwordHash = BCrypt.hashpw(usuario.getPword(), BCrypt.gensalt());
+        usuario.setPword(pwordHash);
         usuarioService.save(usuario);
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -55,7 +59,8 @@ public class UsuarioController {
         if (existingUser == null) {
             existingUser = usuarioService.findByEmail(nombreEmail);
         }
-        if (existingUser != null && existingUser.getPword().equals(pword)) {
+
+        if (existingUser != null && BCrypt.checkpw(pword, existingUser.getPword())) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("usuario", existingUser);
@@ -199,7 +204,8 @@ public class UsuarioController {
             Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
             System.out.println(existingUsuario.getNombre());
             if (existingUsuario != null) {
-                existingUsuario.setPword(updatedUsuario.getPword());
+                String pwordHash = BCrypt.hashpw(updatedUsuario.getPword(), BCrypt.gensalt());
+                existingUsuario.setPword(pwordHash);
                 usuarioService.save(existingUsuario);
                 Map<String, String> response = new HashMap<>();
                 response.put("status", "success");
