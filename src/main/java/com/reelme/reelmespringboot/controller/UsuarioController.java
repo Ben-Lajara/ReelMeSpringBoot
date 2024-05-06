@@ -1,7 +1,9 @@
 package com.reelme.reelmespringboot.controller;
 
 import com.reelme.reelmespringboot.model.*;
+import com.reelme.reelmespringboot.repository.RolRepository;
 import com.reelme.reelmespringboot.repository.UsuariosSeguidosRepository;
+import com.reelme.reelmespringboot.service.JwtTokenProviderService;
 import com.reelme.reelmespringboot.service.ResenaService;
 import com.reelme.reelmespringboot.service.UsuarioService;
 import com.reelme.reelmespringboot.service.UsuariosSeguidosService;
@@ -16,9 +18,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Key;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.*;
+import java.util.stream.Collectors;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
@@ -32,11 +42,18 @@ public class UsuarioController {
     @Autowired
     private ResenaService resenaService;
 
+    @Autowired
+    private RolRepository rolRepository;
+
+    @Autowired
+    private JwtTokenProviderService jwtTokenProviderService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Usuario usuario) {
         String pwordHash = BCrypt.hashpw(usuario.getPword(), BCrypt.gensalt());
         usuario.setPword(pwordHash);
+        usuario.setPerfil("PruebaPerfil.jpg");
+        usuario.setRoles(Collections.singleton(rolRepository.findByRol("ROLE_USER")));
         usuarioService.save(usuario);
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -53,17 +70,39 @@ public class UsuarioController {
         }
     }
 
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> delete(@RequestParam String pword, @RequestParam String nombre) {
+        Usuario existingUser = usuarioService.findByName(nombre);
+        if (existingUser != null && BCrypt.checkpw(pword, existingUser.getPword())) {
+            usuarioService.delete(existingUser);
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+    }
+
     @PostMapping("/loginNombreEmail")
     public ResponseEntity<?> loginNombreEmail(@RequestParam String nombreEmail, @RequestParam String pword) {
         Usuario existingUser = usuarioService.findByName(nombreEmail);
         if (existingUser == null) {
             existingUser = usuarioService.findByEmail(nombreEmail);
         }
-
+        //if (existingUser != null && existingUser.getPword().equals(pword)) {
         if (existingUser != null && BCrypt.checkpw(pword, existingUser.getPword())) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("usuario", existingUser);
+
+            List<String> roles = existingUser.getRoles().stream()
+                    .map(Rol::getRol)
+                    .collect(Collectors.toList());
+            response.put("roles", roles);
+
+            String jwt = jwtTokenProviderService.createToken(existingUser.getNombre(), roles);
+            response.put("token", jwt);
+
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
@@ -299,6 +338,42 @@ public class UsuarioController {
                 response.put("message", "Usuario not found");
                 return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
             }
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/vetar")
+    public ResponseEntity<?> vetar(@RequestParam String nombre, @RequestParam String duracionString) throws Exception{
+        SimpleDateFormat formateador = new SimpleDateFormat("dd/MM/yyyy, HH:mm:ss");
+        Date duracionVeto = formateador.parse(duracionString);
+        try{
+            Usuario usuario = usuarioService.findByName(nombre);
+            usuario.setVeto(duracionVeto);
+            usuarioService.save(usuario);
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/levantarVeto")
+    public ResponseEntity<?> levantarVeto(@RequestParam String nombre){
+        try{
+            Usuario usuario = usuarioService.findByName(nombre);
+            usuario.setVeto(null);
+            usuarioService.save(usuario);
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("status", "error");

@@ -3,6 +3,7 @@ package com.reelme.reelmespringboot.controller;
 import com.reelme.reelmespringboot.model.Pelicula;
 import com.reelme.reelmespringboot.model.Resena;
 import com.reelme.reelmespringboot.model.Usuario;
+import com.reelme.reelmespringboot.service.JwtTokenProviderService;
 import com.reelme.reelmespringboot.service.PeliculaService;
 import com.reelme.reelmespringboot.service.ResenaService;
 import com.reelme.reelmespringboot.service.UsuarioService;
@@ -30,6 +31,9 @@ public class ResenaController {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private JwtTokenProviderService jwtTokenProviderService;
 
     @PostMapping("/review")
     public ResponseEntity<?> review(@RequestBody Map<String, Object> parametros){
@@ -78,21 +82,38 @@ public class ResenaController {
     }
 
     @GetMapping("/review")
-    public ResponseEntity<?> getReview(@RequestParam String  usuario, @RequestParam String idPelicula) {
+    public ResponseEntity<?> getReview(@RequestParam String usuario, @RequestParam String idPelicula, @RequestHeader("Authorization") String token){
         System.out.println("Se ha accedido al get");
-        Usuario usuarioFound = usuarioService.findByName(usuario);
-        System.out.println("usuario: " + usuarioFound);
-        Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-        System.out.println("idPelicula: " + peliculaId);
-        try {
-            Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
-            return new ResponseEntity<>(resena, HttpStatus.OK);
-        } catch (Exception e) {
+        System.out.println("Header: "+ token);
+
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            System.out.println("Token: " + token);
+        }
+
+        System.out.println("Usuario Token: " + jwtTokenProviderService.getUsernameFromJwt(token));
+
+        if(!usuario.equals(jwtTokenProviderService.getUsernameFromJwt(token))){
             Map<String, String> response = new HashMap<>();
             response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            response.put("message", "Unauthorized");
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        }else{
+            Usuario usuarioFound = usuarioService.findByName(usuario);
+            System.out.println("usuario: " + usuarioFound);
+            Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
+            System.out.println("idPelicula: " + peliculaId);
+            try {
+                Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
+                return new ResponseEntity<>(resena, HttpStatus.OK);
+            } catch (Exception e) {
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "error");
+                response.put("message", e.getMessage());
+                return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
+
     }
 
     @PutMapping("/review")

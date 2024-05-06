@@ -6,7 +6,11 @@ import com.reelme.reelmespringboot.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UsuarioService {
@@ -58,5 +62,15 @@ public class UsuarioService {
 
     public Usuario findByEmail(String email) {
         return usuarioRepository.findByEmail(email);
+    }
+
+    public void delete(Usuario usuario) {
+        usuarioRepository.delete(usuario);
+    }
+
+    public void vetar(String nombre, Date duracionVeto) {
+        Usuario usuario = usuarioRepository.findByNombre(nombre);
+        usuario.setVeto(duracionVeto);
+        usuarioRepository.save(usuario);
     }
 }

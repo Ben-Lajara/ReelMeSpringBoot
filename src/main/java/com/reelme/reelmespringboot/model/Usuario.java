@@ -1,10 +1,20 @@
 package com.reelme.reelmespringboot.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "nombre")
 public class Usuario {
     @Id
     private String nombre;
@@ -30,7 +40,16 @@ public class Usuario {
     @OneToMany(mappedBy = "nombreUsuario")
     private List<UsuariosSeguidos> seguidores;
 
+    @ManyToMany
+    @JoinTable(
+            name = "usuarios_roles",
+            joinColumns = @JoinColumn(
+                    name = "nombreUsuario", referencedColumnName = "nombre"),
+            inverseJoinColumns = @JoinColumn(
+                    name = "idRol", referencedColumnName = "id"))
+    private Set<Rol> roles= new HashSet<>();
 
+    private Date veto;
 
     public Usuario() {
     }
@@ -123,6 +142,22 @@ public class Usuario {
 
     public void setDireccion(String direccion) {
         this.direccion = direccion;
+    }
+
+    public Set<Rol> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Rol> roles) {
+        this.roles = roles;
+    }
+
+    public Date getVeto() {
+        return veto;
+    }
+
+    public void setVeto(Date veto) {
+        this.veto = veto;
     }
 
     @Override
