@@ -16,6 +16,14 @@ public class DenunciaService {
         return denunciaRepository.findAll();
     }
 
+    public List<Denuncia> findByEstadoLike(String estado) {
+        return denunciaRepository.findByEstadoLike(estado);
+    }
+
+    public List<Denuncia> findByEstadoIsNull() {
+        return denunciaRepository.findByEstadoIsNull();
+    }
+
     public Denuncia save(Denuncia denuncia) {
         return denunciaRepository.save(denuncia);
     }

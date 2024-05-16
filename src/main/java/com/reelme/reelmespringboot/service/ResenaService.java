@@ -59,5 +59,13 @@ public class ResenaService {
         return resenaRepository.countByFechaBetweenAndNomUsuario(dateStart, dateEnd, usuario);
     }
 
+    public Resena findById(int id) {
+        return resenaRepository.findById(id);
+    }
+
+    public void delete(Resena resena) {
+        resenaRepository.delete(resena);
+    }
+
 
 }

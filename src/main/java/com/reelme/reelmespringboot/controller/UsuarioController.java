@@ -32,6 +32,7 @@ import io.jsonwebtoken.security.Keys;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
+@RequestMapping("/api")
 public class UsuarioController {
     @Autowired
     private UsuarioService usuarioService;
@@ -48,7 +49,7 @@ public class UsuarioController {
     @Autowired
     private JwtTokenProviderService jwtTokenProviderService;
 
-    @PostMapping("/register")
+    @PostMapping("/usuario/register")
     public ResponseEntity<?> register(@RequestBody Usuario usuario) {
         String pwordHash = BCrypt.hashpw(usuario.getPword(), BCrypt.gensalt());
         usuario.setPword(pwordHash);
@@ -58,7 +59,7 @@ public class UsuarioController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @PostMapping("/login")
+    @PostMapping("/usuario/login")
     public ResponseEntity<?> login(@RequestBody Usuario usuario) {
         Usuario existingUser = usuarioService.findByName(usuario.getNombre());
         if (existingUser != null && existingUser.getPword().equals(usuario.getPword())) {
@@ -70,7 +71,7 @@ public class UsuarioController {
         }
     }
 
-    @DeleteMapping("/delete")
+    @DeleteMapping("/usuario/delete")
     public ResponseEntity<?> delete(@RequestParam String pword, @RequestParam String nombre) {
         Usuario existingUser = usuarioService.findByName(nombre);
         if (existingUser != null && BCrypt.checkpw(pword, existingUser.getPword())) {
@@ -83,7 +84,7 @@ public class UsuarioController {
         }
     }
 
-    @PostMapping("/loginNombreEmail")
+    @PostMapping("/usuario/loginNombreEmail")
     public ResponseEntity<?> loginNombreEmail(@RequestParam String nombreEmail, @RequestParam String pword) {
         Usuario existingUser = usuarioService.findByName(nombreEmail);
         if (existingUser == null) {
@@ -109,7 +110,7 @@ public class UsuarioController {
         }
     }
 
-    @GetMapping("/seguidos/{nombre}")
+    @GetMapping("/usuario/seguidos/{nombre}")
     public ResponseEntity<List<Map<String, Object>>> getSeguidos(@PathVariable String nombre) {
         Usuario usuarioFound = usuarioService.findByName(nombre);
         List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
@@ -144,6 +145,27 @@ public class UsuarioController {
         return ResponseEntity.ok(seguidosCompletos);
     }
 
+    @GetMapping("/usuario/{nombre}/seguidos/reviewed")
+    public ResponseEntity<List<Resena>> getResenasRecientesSeguidos(@PathVariable String nombre) {
+        Usuario usuarioFound = usuarioService.findByName(nombre);
+        List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
+        List<Resena> resenasSeguidos = new ArrayList<>();
+        for (UsuariosSeguidos seguido : seguidos) {
+            Usuario usuario = usuarioService.findByName(seguido.getUsuarioSeguido().getNombre());
+            List<Resena> resenasUsuario = resenaService.findByUsuario(usuario);
+            Resena resena = resenasUsuario.stream()
+                    .sorted(Comparator.comparing(Resena::getFecha).reversed())
+                    .findFirst()
+                    .orElse(null);
+            if(resena != null){
+                resenasSeguidos.add(resena);
+            }
+
+        }
+
+        return ResponseEntity.ok(resenasSeguidos);
+    }
+
     @GetMapping("/usuarios")
     public ResponseEntity<List<Usuario>> getUsuarios(){
         List<Usuario> usuarios = usuarioService.findAll();
@@ -160,7 +182,7 @@ public class UsuarioController {
         }
     }
 
-    @GetMapping("/about/{usuario}")
+    @GetMapping("/usuario/about/{usuario}")
     public ResponseEntity<Map<String, Object>> getAbout(@PathVariable String usuario){
         Usuario usuarioFound = usuarioService.findByName(usuario);
         if(usuarioFound == null){
@@ -217,7 +239,7 @@ public class UsuarioController {
         }
     }
 
-    @PostMapping("/upload")
+    @PostMapping("/usuario/upload")
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("nombre") String nombre){
         try {
             // Guarda el archivo en el sistema de archivos
@@ -237,7 +259,7 @@ public class UsuarioController {
         }
     }
 
-    @PutMapping("/cambiarPword")
+    @PutMapping("/usuario/cambiarPword")
     public ResponseEntity<?> editPword(@RequestBody Usuario updatedUsuario) {
         try {
             Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
@@ -263,14 +285,14 @@ public class UsuarioController {
         }
     }
 
-    @GetMapping("/numResenas/{nombre}")
+    @GetMapping("/usuario/numResenas/{nombre}")
     public ResponseEntity<Integer> getNumResenas(@PathVariable String nombre){
         Usuario usuario = usuarioService.findByName(nombre);
         int numResenas = resenaService.countByUsuario(usuario);
         return ResponseEntity.ok(numResenas);
     }
 
-    @PutMapping("/color")
+    @PutMapping("/usuario/color")
     public ResponseEntity<?> editColor(@RequestBody Usuario updatedUsuario) {
         try {
             Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
@@ -294,7 +316,7 @@ public class UsuarioController {
         }
     }
 
-    @PutMapping("/bio")
+    @PutMapping("/usuario/bio")
     public ResponseEntity<?> editBio(@RequestBody Usuario updatedUsuario) {
         try {
             Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
@@ -346,7 +368,7 @@ public class UsuarioController {
         }
     }
 
-    @PutMapping("/vetar")
+    @PutMapping("/usuario/vetar")
     public ResponseEntity<?> vetar(@RequestParam String nombre, @RequestParam String duracionString) throws Exception{
         SimpleDateFormat formateador = new SimpleDateFormat("dd/MM/yyyy, HH:mm:ss");
         Date duracionVeto = formateador.parse(duracionString);
@@ -365,7 +387,7 @@ public class UsuarioController {
         }
     }
 
-    @PutMapping("/levantarVeto")
+    @PutMapping("/usuario/levantarVeto")
     public ResponseEntity<?> levantarVeto(@RequestParam String nombre){
         try{
             Usuario usuario = usuarioService.findByName(nombre);

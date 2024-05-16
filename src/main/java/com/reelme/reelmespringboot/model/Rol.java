@@ -14,8 +14,6 @@ public class Rol {
 
     private String rol;
 
-    @ManyToMany(mappedBy = "roles")
-    private Set<Usuario> usuarios = new HashSet<>();
 
     public Rol() {
     }
@@ -40,11 +38,4 @@ public class Rol {
         this.rol = rol;
     }
 
-    public Set<Usuario> getUsuarios() {
-        return usuarios;
-    }
-
-    public void setUsuarios(Set<Usuario> usuarios) {
-        this.usuarios = usuarios;
-    }
 }

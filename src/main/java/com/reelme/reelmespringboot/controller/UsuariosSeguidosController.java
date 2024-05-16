@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api")
 public class UsuariosSeguidosController {
     @Autowired
     private UsuariosSeguidosService usuariosSeguidosService;
@@ -28,21 +29,21 @@ public class UsuariosSeguidosController {
     @Autowired
     private ResenaService resenaService;
 
-    @GetMapping("/seguidosPor/{nombre}")
+    @GetMapping("/usuarios/seguidosPor/{nombre}")
     public ResponseEntity<UsuariosSeguidos> getSeguidos(@PathVariable String nombre) {
         Usuario usuarioFound = usuarioService.findByName(nombre);
         List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
         return new ResponseEntity(seguidos, HttpStatus.OK);
     }
 
-    @GetMapping("/seguidores/{nombre}")
+    @GetMapping("/usuarios/seguidoresDe/{nombre}")
     public ResponseEntity<UsuariosSeguidos> getSeguidores(@PathVariable String nombre) {
         Usuario usuarioFound = usuarioService.findByName(nombre);
         List<UsuariosSeguidos> seguidores = usuariosSeguidosService.findByUsuarioSeguido(usuarioFound);
         return new ResponseEntity(seguidores, HttpStatus.OK);
     }
 
-    @PostMapping("/seguir")
+    @PostMapping("/usuario/seguir")
     public ResponseEntity<?> seguir(@RequestBody Map<String, Object> parametros){
         String usuario = (String) parametros.get("nombreUsuario");
         String nombreUsuarioSeguido = (String) parametros.get("usuarioSeguido");
@@ -53,7 +54,7 @@ public class UsuariosSeguidosController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @DeleteMapping("/dejarDeSeguir")
+    @DeleteMapping("/usuario/dejarDeSeguir")
     public ResponseEntity<?> dejarDeSeguir(@RequestBody Map<String, Object> parametros){
         String usuario = (String) parametros.get("nombreUsuario");
         String nombreUsuarioSeguido = (String) parametros.get("usuarioSeguido");

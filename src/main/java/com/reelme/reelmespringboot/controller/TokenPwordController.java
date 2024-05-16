@@ -9,15 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Calendar;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/api")
 public class TokenPwordController {
     @Autowired
     private TokenPwordRepository tokenPwordRepository;
@@ -31,7 +29,7 @@ public class TokenPwordController {
     @Autowired
     private UsuarioService usuarioService;
 
-    @PostMapping("/restablecerPword")
+    @PostMapping("/usuario/restablecerPword")
     public ResponseEntity<String> restablecerPword(@RequestParam("email") String email) {
         String token = UUID.randomUUID().toString();
         TokenPword tokenPword = new TokenPword();
@@ -54,7 +52,7 @@ public class TokenPwordController {
         this.javaMailSender.send(mensaje);
     }
 
-    @GetMapping("/getUsuario")
+    @GetMapping("/usuario/tokenPword")
     private ResponseEntity<Usuario> getUsuario(@RequestParam("token") String token){
         TokenPword tokenPword = tokenPwordRepository.findByToken(token);
         if (tokenPword == null) {

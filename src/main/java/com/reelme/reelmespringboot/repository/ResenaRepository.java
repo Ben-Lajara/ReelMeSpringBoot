@@ -26,6 +26,7 @@ public interface ResenaRepository extends CrudRepository<Resena, Integer> {
 
     int countByFechaBetweenAndNomUsuario(Date dateStart, Date dateEnd, Usuario usuario);
 
+    Resena findById(int id);
 
     List<Resena> findTop4ByNomUsuarioOrderByFechaDesc(Usuario usuario);
 

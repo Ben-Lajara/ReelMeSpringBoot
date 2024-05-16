@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@JsonIdentityInfo(
+/*@JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
-        property = "nombre")
+        property = "nombre")*/
 public class Usuario {
     @Id
     private String nombre;

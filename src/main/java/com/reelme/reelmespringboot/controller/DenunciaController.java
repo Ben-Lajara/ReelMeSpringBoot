@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
+@RequestMapping("/api")
 public class DenunciaController {
     @Autowired
     private DenunciaService denunciaService;
@@ -37,8 +38,40 @@ public class DenunciaController {
         return ResponseEntity.ok(denuncias);
     }
 
+    @GetMapping("/denuncias/rechazadas")
+    public ResponseEntity<?> getDenunciasRechazadas() {
+        List<Denuncia> denuncias = denunciaService.findByEstadoLike("Rechazada");
 
-    @PostMapping("/denunciar")
+        for (Denuncia denuncia : denuncias) {
+            Resena resena = resenaService.findById(denuncia.getIdResena());
+            denuncia.setComentarioResena(resena.getComentario());
+        }
+
+        return ResponseEntity.ok(denuncias);
+    }
+
+    @GetMapping("/denuncias/pendientes")
+    public ResponseEntity<?> getDenunciasPendientes() {
+        List<Denuncia> denuncias = denunciaService.findByEstadoIsNull();
+        for (Denuncia denuncia : denuncias) {
+            Resena resena = resenaService.findById(denuncia.getIdResena());
+            denuncia.setComentarioResena(resena.getComentario());
+        }
+        return ResponseEntity.ok(denuncias);
+    }
+
+    @GetMapping("/denuncias/aceptadas")
+    public ResponseEntity<?> getDenunciasAceptadas() {
+        List<Denuncia> denuncias = denunciaService.findByEstadoLike("Aceptada");
+        for (Denuncia denuncia : denuncias) {
+            Resena resena = resenaService.findById(denuncia.getIdResena());
+            denuncia.setComentarioResena(resena.getComentario());
+        }
+        return ResponseEntity.ok(denuncias);
+    }
+
+
+    @PostMapping("/denuncias/denunciar")
     public ResponseEntity<?> denunciar(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula, @RequestParam String motivo) {
         System.out.println("Se ha accedido a denunciar.");
         Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
@@ -50,7 +83,7 @@ public class DenunciaController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @GetMapping("/denunciaExistente")
+    @GetMapping("/denuncias/existente")
     public ResponseEntity<Denuncia> denunciaExistente(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula) {
         Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
         Optional<Pelicula> peliculaDenunciada = peliculaService.findById(idPelicula);
@@ -60,26 +93,23 @@ public class DenunciaController {
         return ResponseEntity.ok(denuncia);
     }
 
+
     @PutMapping("/rechazarDenuncia")
-    public ResponseEntity<?> rechazarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula) {
+    public ResponseEntity<?> rechazarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam int idResena) {
         Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
-        Optional<Pelicula> peliculaDenunciada = peliculaService.findById(idPelicula);
-        Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciado, peliculaDenunciada);
-        int idResena = resena.getId();
         Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(denunciante, denunciado, idResena);
         denuncia.setEstado("Rechazada");
         denunciaService.save(denuncia);
-        return new ResponseEntity<>(HttpStatus.OK);
+        return ResponseEntity.ok(denuncia);
     }
 
     @PutMapping("/aceptarDenuncia")
-    public ResponseEntity<?> aceptarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula) {
-        Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
-        Optional<Pelicula> peliculaDenunciada = peliculaService.findById(idPelicula);
-        Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciado, peliculaDenunciada);
-        int idResena = resena.getId();
+    public ResponseEntity<?> aceptarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam int idResena) {
+
         Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(denunciante, denunciado, idResena);
         denuncia.setEstado("Aceptada");
+        Resena resena = resenaService.findById(denuncia.getIdResena());
+        resena.setDenunciada(true);
         denunciaService.save(denuncia);
         return new ResponseEntity<>(HttpStatus.OK);
     }

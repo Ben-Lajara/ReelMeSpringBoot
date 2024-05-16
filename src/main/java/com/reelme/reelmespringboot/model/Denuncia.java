@@ -1,9 +1,6 @@
 package com.reelme.reelmespringboot.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import org.apache.catalina.User;
 
 @Entity
@@ -16,9 +13,13 @@ public class Denuncia {
 
     private String denunciado;
 
+    @Column(length = 10000)
     private String motivo;
 
     private int idResena;
+
+    @Transient
+    private String comentarioResena;
 
     private String estado;
     public Denuncia() {
@@ -69,6 +70,14 @@ public class Denuncia {
 
     public void setIdResena(int idResena) {
         this.idResena = idResena;
+    }
+
+    public String getComentarioResena() {
+        return comentarioResena;
+    }
+
+    public void setComentarioResena(String comentarioResena) {
+        this.comentarioResena = comentarioResena;
     }
 
     public String getEstado() {

@@ -1,5 +1,6 @@
 package com.reelme.reelmespringboot.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 
 import java.util.Date;
@@ -9,6 +10,7 @@ public class Resena {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private Date fecha;
     private float calificacion;
     private String comentario;
@@ -21,6 +23,8 @@ public class Resena {
     @ManyToOne
     @JoinColumn(name = "usuario")
     private Usuario nomUsuario;
+
+    private boolean denunciada;
 
     public Resena() {
     }
@@ -98,6 +102,14 @@ public class Resena {
 
     public void setNomUsuario(Usuario usuario) {
         this.nomUsuario = usuario;
+    }
+
+    public boolean isDenunciada() {
+        return denunciada;
+    }
+
+    public void setDenunciada(boolean denunciada) {
+        this.denunciada = denunciada;
     }
 
     @Override
