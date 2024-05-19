@@ -1,12 +1,11 @@
 package com.reelme.reelmespringboot.controller;
 
+import com.reelme.reelmespringboot.dto.EntradaDiarioDTO;
 import com.reelme.reelmespringboot.model.Pelicula;
 import com.reelme.reelmespringboot.model.Resena;
+import com.reelme.reelmespringboot.model.Revisionado;
 import com.reelme.reelmespringboot.model.Usuario;
-import com.reelme.reelmespringboot.service.JwtTokenProviderService;
-import com.reelme.reelmespringboot.service.PeliculaService;
-import com.reelme.reelmespringboot.service.ResenaService;
-import com.reelme.reelmespringboot.service.UsuarioService;
+import com.reelme.reelmespringboot.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +33,9 @@ public class ResenaController {
 
     @Autowired
     private JwtTokenProviderService jwtTokenProviderService;
+
+    @Autowired
+    private RevisionadoService revisionadoService;
 
     @PostMapping("/review")
     public ResponseEntity<?> review(@RequestBody Map<String, Object> parametros){
@@ -172,6 +174,7 @@ public class ResenaController {
             boolean gustado = (Boolean) parametros.get("gustado");
             String idPelicula = (String) parametros.get("id_pelicula");
             String usuario = (String) parametros.get("usuario");
+            List<Map<String, Object>> revisionados = (List<Map<String, Object>>) parametros.get("revisionados");
 
             Usuario nomUsuario = usuarioService.findByName(usuario);
             System.out.println("nomUsuario: " + nomUsuario);
@@ -185,8 +188,37 @@ public class ResenaController {
                 existingResena.setGustado(gustado);
                 existingResena.setIdPelicula(peliculaId.get());
                 existingResena.setNomUsuario(nomUsuario);
+
+                for (Map<String, Object> revisionadoMap : revisionados) {
+                    Integer id = (Integer) revisionadoMap.get("id");
+                    Revisionado existingRevisionado = revisionadoService.findById(id);
+                    if (existingRevisionado != null) {
+                        String fechaRevisionadoString = (String) revisionadoMap.get("fechaRevisionado");
+                        SimpleDateFormat formatterRevisionado = new SimpleDateFormat("yyyy-MM-dd");
+                        Date fechaRevisionado = formatterRevisionado.parse(fechaRevisionadoString);
+                        existingRevisionado.setFechaRevisionado(fechaRevisionado);
+
+                        String comentarioRevisionado = (String) revisionadoMap.get("comentarioRevisionado");
+                        if (comentarioRevisionado != null) {
+                            existingRevisionado.setComentarioRevisionado(comentarioRevisionado);
+                        }
+
+                        revisionadoService.save(existingRevisionado);
+                    }
+                }
+
+                if(parametros.get("revisionado") instanceof String){
+                    String fechaRString = (String) parametros.get("revisionado");
+                    System.out.println("fechaString: " + fechaString);
+                    SimpleDateFormat fechaRFormateada = new SimpleDateFormat("yyyy-MM-dd");
+                    Date fechaRevisionado = fechaRFormateada.parse(fechaRString);
+                    Revisionado revisionado = new Revisionado(fechaRevisionado, existingResena);
+                    System.out.println("revisionado: " + revisionado);
+                    existingResena.setRevisionados(revisionado);
+                }
                 resenaService.save(existingResena);
                 usuarioService.updateRango(nomUsuario);
+
                 Map<String, String> response = new HashMap<>();
                 response.put("status", "success");
                 return new ResponseEntity<>(response, HttpStatus.OK);
@@ -205,22 +237,53 @@ public class ResenaController {
     }
 
     @GetMapping("/diario/{usuario}")
-    public ResponseEntity<List<Resena>> getResenasByUsuario(@PathVariable String usuario) {
-        System.out.println("usuario: " + usuario);
+    public ResponseEntity<List<EntradaDiarioDTO>> getResenasByUsuario(@PathVariable String usuario) {
         Usuario usuarioFound = usuarioService.findByName(usuario);
-        System.out.println("usuarioFound: " + usuarioFound);
         if (usuarioFound == null) {
-            System.out.println("usuarioFound is null");
             return ResponseEntity.notFound().build();
-        }else{
-            System.out.println("usuarioFound is not null");
+        } else {
             List<Resena> resenas = resenaService.findByUsuario(usuarioFound);
-            System.out.println("resenas: " + resenas);
-            if(resenas.isEmpty()) {
+            if (resenas.isEmpty()) {
                 return ResponseEntity.notFound().build();
-            }else {
-                return ResponseEntity.ok(resenas);
+            } else {
+                List<EntradaDiarioDTO> entradasDiario = new ArrayList<>();
+
+                for (Resena resena : resenas) {
+                    // Añade las reseñas
+                    EntradaDiarioDTO entrada = new EntradaDiarioDTO(
+                            resena.getFecha(),
+                            resena.getCalificacion(),
+                            resena.getComentario(),
+                            resena.isGustado(),
+                            resena.getIdPelicula(),
+                            resena.getNomUsuario(),
+                            resena.isDenunciada(),
+                            false // esRevisionado
+                    );
+                    entradasDiario.add(entrada);
+
+                    // Añade los revisionados
+                    if (resena.getRevisionados() != null) {
+                        for (Revisionado revisionado : resena.getRevisionados()) {
+                            EntradaDiarioDTO revisionadoentrada = new EntradaDiarioDTO(
+                                    revisionado.getFechaRevisionado(),
+                                    resena.getCalificacion(),
+                                    revisionado.getComentarioRevisionado(),
+                                    resena.isGustado(),
+                                    resena.getIdPelicula(),
+                                    resena.getNomUsuario(),
+                                    resena.isDenunciada(),
+                                    true // esRevisionado
+                            );
+                            entradasDiario.add(revisionadoentrada);
+                        }
+                    }
+                }
+                entradasDiario.sort((a, b) -> a.getFecha().compareTo(b.getFecha()));
+
+                return ResponseEntity.ok(entradasDiario);
             }
+            
         }
 
     }
@@ -243,6 +306,7 @@ public class ResenaController {
             resenaPublica.put("titulo", peliculaId.get().getTitulo());
             resenaPublica.put("year", peliculaId.get().getYear());
             resenaPublica.put("foto", peliculaId.get().getFoto());
+            resenaPublica.put("revisionados", resena.getRevisionados());
             if (resena == null) {
                 return ResponseEntity.notFound().build();
             } else {
@@ -272,7 +336,7 @@ public class ResenaController {
         if (usuarioFound == null) {
             return ResponseEntity.notFound().build();
         } else {
-            List<Resena> resenas = resenaService.findTop4ByUsuarioOrderByFechaDesc(usuarioFound);
+            List<Resena> resenas = resenaService.findTop4ByUsuarioOrderByLatestActivityDesc(usuarioFound);
             if (resenas.isEmpty()) {
                 return ResponseEntity.notFound().build();
             } else {

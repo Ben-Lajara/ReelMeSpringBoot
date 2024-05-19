@@ -1,9 +1,11 @@
 package com.reelme.reelmespringboot.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 public class Resena {
@@ -25,6 +27,13 @@ public class Resena {
     private Usuario nomUsuario;
 
     private boolean denunciada;
+
+    @OneToMany(mappedBy = "resena", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Revisionado> revisionados;
+
+    @Transient
+    private boolean isRevisionado;
 
     public Resena() {
     }
@@ -110,6 +119,23 @@ public class Resena {
 
     public void setDenunciada(boolean denunciada) {
         this.denunciada = denunciada;
+    }
+
+    public List<Revisionado> getRevisionados() {
+        return revisionados;
+    }
+
+    public void setRevisionados(Revisionado revisionado) {
+        this.revisionados.add(revisionado);
+    }
+
+
+    public boolean isRevisionado() {
+        return isRevisionado;
+    }
+
+    public void setRevisionado(boolean revisionado) {
+        isRevisionado = revisionado;
     }
 
     @Override

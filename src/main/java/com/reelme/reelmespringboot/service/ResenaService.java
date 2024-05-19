@@ -47,12 +47,27 @@ public class ResenaService {
         return resenaRepository.countByNomUsuario(usuario);
     }
 
-    public List<Resena> findTop4ByUsuarioOrderByFechaDesc(Usuario usuario) {
+    /*public List<Resena> findTop4ByUsuarioOrderByFechaDesc(Usuario usuario) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Resena> query = cb.createQuery(Resena.class);
         Root<Resena> root = query.from(Resena.class);
         query.select(root).where(cb.equal(root.get("nomUsuario"), usuario)).orderBy(cb.desc(root.get("fecha")));
         return entityManager.createQuery(query).setMaxResults(4).getResultList();
+    }*/
+
+    public List<Resena> findTop4ByUsuarioOrderByLatestActivityDesc(Usuario usuario) {
+        List<Resena> resenas = findByUsuario(usuario);
+        resenas.sort((r1, r2) -> {
+            Date date1 = r1.getRevisionados().isEmpty() ? r1.getFecha() : r1.getRevisionados().get(r1.getRevisionados().size() - 1).getFechaRevisionado();
+            Date date2 = r2.getRevisionados().isEmpty() ? r2.getFecha() : r2.getRevisionados().get(r2.getRevisionados().size() - 1).getFechaRevisionado();
+            return date2.compareTo(date1);
+        });
+
+        for (Resena resena : resenas) {
+            resena.setRevisionado(!resena.getRevisionados().isEmpty());
+        }
+
+        return resenas.size() > 4 ? resenas.subList(0, 4) : resenas;
     }
 
     public int countByFechaBetweenAndNomUsuario(Date dateStart, Date dateEnd, Usuario usuario) {
