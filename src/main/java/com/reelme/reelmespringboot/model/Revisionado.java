@@ -31,6 +31,12 @@ public class Revisionado {
         this.resena = resena;
     }
 
+    public Revisionado(Date fechaRevisionado, Resena resena, String comentarioRevisionado) {
+        this.fechaRevisionado = fechaRevisionado;
+        this.resena = resena;
+        this.comentarioRevisionado = comentarioRevisionado;
+    }
+
     public int getId() {
         return id;
     }

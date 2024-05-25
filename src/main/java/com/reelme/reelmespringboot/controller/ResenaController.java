@@ -175,6 +175,7 @@ public class ResenaController {
             String idPelicula = (String) parametros.get("id_pelicula");
             String usuario = (String) parametros.get("usuario");
             List<Map<String, Object>> revisionados = (List<Map<String, Object>>) parametros.get("revisionados");
+            List<Map<String, Object>> revisionadosNuevos = (List<Map<String, Object>>) parametros.get("revisionadosNuevos");
 
             Usuario nomUsuario = usuarioService.findByName(usuario);
             System.out.println("nomUsuario: " + nomUsuario);
@@ -207,15 +208,16 @@ public class ResenaController {
                     }
                 }
 
-                if(parametros.get("revisionado") instanceof String){
-                    String fechaRString = (String) parametros.get("revisionado");
-                    System.out.println("fechaString: " + fechaString);
-                    SimpleDateFormat fechaRFormateada = new SimpleDateFormat("yyyy-MM-dd");
-                    Date fechaRevisionado = fechaRFormateada.parse(fechaRString);
-                    Revisionado revisionado = new Revisionado(fechaRevisionado, existingResena);
-                    System.out.println("revisionado: " + revisionado);
-                    existingResena.setRevisionados(revisionado);
+                for(Map<String, Object> revisionadoNuevo : revisionadosNuevos){
+                    String fechaRevisionadoString = (String) revisionadoNuevo.get("fechaRevisionado");
+                    SimpleDateFormat formatterRevisionado = new SimpleDateFormat("yyyy-MM-dd");
+                    Date fechaRevisionado = formatterRevisionado.parse(fechaRevisionadoString);
+                    String comentarioRevisionado = (String) revisionadoNuevo.get("comentarioRevisionado");
+                    Revisionado revisionado = new Revisionado(fechaRevisionado,  existingResena, comentarioRevisionado);
+                    revisionadoService.save(revisionado);
                 }
+
+
                 resenaService.save(existingResena);
                 usuarioService.updateRango(nomUsuario);
 
@@ -355,4 +357,9 @@ public class ResenaController {
         }
     }
 
+    @GetMapping("/reviewed/top4")
+    public ResponseEntity<List<Pelicula>> getTop4PeliculasWithMostResenas() {
+        List<Pelicula> topPeliculas = resenaService.findTop4PeliculasWithMostResenas();
+        return new ResponseEntity<>(topPeliculas, HttpStatus.OK);
+    }
 }

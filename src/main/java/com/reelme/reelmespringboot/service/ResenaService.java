@@ -13,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -82,5 +83,13 @@ public class ResenaService {
         resenaRepository.delete(resena);
     }
 
-
+    public List<Pelicula> findTop4PeliculasWithMostResenas() {
+        List<Object[]> results = resenaRepository.findTop4PeliculasByResenaCount();
+        List<Pelicula> topPeliculas = new ArrayList<>();
+        for (Object[] result : results) {
+            Pelicula pelicula = (Pelicula) result[0];
+            topPeliculas.add(pelicula);
+        }
+        return topPeliculas;
+    }
 }

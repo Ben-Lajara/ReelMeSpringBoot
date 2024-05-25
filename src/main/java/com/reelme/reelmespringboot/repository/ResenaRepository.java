@@ -29,6 +29,6 @@ public interface ResenaRepository extends CrudRepository<Resena, Integer> {
     Resena findById(int id);
 
     List<Resena> findTop4ByNomUsuarioOrderByFechaDesc(Usuario usuario);
-
-
+    @Query("SELECT r.idPelicula, COUNT(r) as resenaCount FROM Resena r GROUP BY r.idPelicula ORDER BY resenaCount DESC LIMIT 4")
+    List<Object[]> findTop4PeliculasByResenaCount();
 }

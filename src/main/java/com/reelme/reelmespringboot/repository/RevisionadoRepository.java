@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface RevisionadoRepository extends CrudRepository<Revisionado, Integer> {
     Revisionado findById(int id);
+    void deleteById(int id);
 }

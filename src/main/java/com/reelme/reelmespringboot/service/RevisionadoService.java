@@ -20,4 +20,8 @@ public class RevisionadoService {
         return revisionadoRepository.findById(id);
     }
 
+    public void delete(int id){
+        revisionadoRepository.deleteById(id);
+    }
+
 }
