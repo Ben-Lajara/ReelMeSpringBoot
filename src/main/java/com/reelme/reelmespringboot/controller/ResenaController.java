@@ -6,6 +6,7 @@ import com.reelme.reelmespringboot.model.Resena;
 import com.reelme.reelmespringboot.model.Revisionado;
 import com.reelme.reelmespringboot.model.Usuario;
 import com.reelme.reelmespringboot.service.*;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,63 +40,193 @@ public class ResenaController {
 
     @PostMapping("/review")
     public ResponseEntity<?> review(@RequestBody Map<String, Object> parametros){
-        System.out.println("Se ha accedido al post");
         try {
-            String fechaString = (String) parametros.get("fecha");
-            System.out.println("fechaString: " + fechaString);
+            // Comprueba que los campos requeridos están presentes
+            String[] requiredFields = {"fecha", "calificacion", "comentario", "gustado", "id_pelicula", "usuario", "titulo", "year", "foto"};
+            for (String field : requiredFields) {
+                if (!parametros.containsKey(field)) {
+                    return new ResponseEntity<>("Missing field: " + field, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            // Parseo y validación de los campos
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-            Date fecha = formatter.parse(fechaString);
-            System.out.println("fecha: " + fecha);
-            float calificacion = 0.0f;
+            Date fecha = formatter.parse((String) parametros.get("fecha"));
+            float calificacion;
             if (parametros.get("calificacion") instanceof Integer) {
-                int calificacionInt = (Integer) parametros.get("calificacion");
-                calificacion = (float) calificacionInt;
+                calificacion = (float) (int) parametros.get("calificacion");
             } else if (parametros.get("calificacion") instanceof Double) {
-                double calificacionDouble = (Double) parametros.get("calificacion");
-                calificacion = (float) calificacionDouble;
+                calificacion = (float) (double) parametros.get("calificacion");
+            } else {
+                return new ResponseEntity<>("Invalid field: calificacion", HttpStatus.BAD_REQUEST);
+            }
+            if (calificacion < 0 || calificacion > 5) {
+                return new ResponseEntity<>("Invalid field: calificacion", HttpStatus.BAD_REQUEST);
             }
             String comentario = (String) parametros.get("comentario");
             boolean gustado = (Boolean) parametros.get("gustado");
+            boolean spoiler = (Boolean) parametros.get("spoiler");
             String idPelicula = (String) parametros.get("id_pelicula");
             String usuario = (String) parametros.get("usuario");
             String titulo = (String) parametros.get("titulo");
             String year = (String) parametros.get("year");
             String foto = (String) parametros.get("foto");
+            List<Map<String, Object>> revisionadosNuevos = (List<Map<String, Object>>) parametros.get("revisionadosNuevos");
 
+            // Comprueba que el usuario y la película existen
             Usuario nomUsuario = usuarioService.findByName(usuario);
-            System.out.println("nomUsuario: " + nomUsuario);
-            Pelicula pelicula = new Pelicula(idPelicula, titulo, year, foto);
-            System.out.println("pelicula: " + pelicula);
-            peliculaService.save(pelicula);
-            Resena resena = new Resena(fecha, calificacion, comentario, gustado, pelicula, nomUsuario);
-            System.out.println("resena: " + resena);
+            if (nomUsuario == null) {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
+            Pelicula pelicula = peliculaService.findById(idPelicula).orElse(null);
+            if (pelicula == null) {
+                // Si la película no existe, la crea con los datos proporcionados
+                pelicula = new Pelicula(idPelicula, titulo, year, foto);
+                peliculaService.save(pelicula);
+            }
 
+            // Comprueba que la reseña no exista
+            Resena existingResena = resenaService.findByUsuarioAndIdPelicula(nomUsuario, Optional.of(pelicula));
+            if (existingResena != null) {
+                return new ResponseEntity<>("Review already exists", HttpStatus.CONFLICT);
+            }
+
+            // Crea y garda la reseña
+            Resena resena = new Resena(fecha, calificacion, comentario, gustado, spoiler, pelicula, nomUsuario);
             resenaService.save(resena);
-
+            for(Map<String, Object> revisionadoNuevo : revisionadosNuevos){
+                Date fechaRevisionado = formatter.parse((String) revisionadoNuevo.get("fechaRevisionado"));
+                String comentarioRevisionado = (String) revisionadoNuevo.get("comentarioRevisionado");
+                Revisionado revisionado = new Revisionado(fechaRevisionado,  resena, comentarioRevisionado);
+                revisionadoService.save(revisionado);
+            }
             usuarioService.updateRango(nomUsuario);
 
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Map.of("status", "error", "message", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("/review")
     public ResponseEntity<?> getReview(@RequestParam String usuario, @RequestParam String idPelicula, @RequestHeader("Authorization") String token){
-        System.out.println("Se ha accedido al get");
-        System.out.println("Header: "+ token);
+        try {
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
 
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-            System.out.println("Token: " + token);
+            if(!usuario.equals(jwtTokenProviderService.getUsernameFromJwt(token))){
+                return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+            }else{
+                Usuario usuarioFound = usuarioService.findByName(usuario);
+                Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
+                if (usuarioFound == null || peliculaId.isEmpty()) {
+                    //return new ResponseEntity<>("Usuario or Pelicula not found", HttpStatus.NOT_FOUND);
+                }
+                Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
+                if (resena == null) {
+                    return new ResponseEntity<>("Resena not found", HttpStatus.NOT_FOUND);
+                }
+                return new ResponseEntity<>(resena, HttpStatus.OK);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        System.out.println("Usuario Token: " + jwtTokenProviderService.getUsernameFromJwt(token));
+    }
+
+
+    @PutMapping("/review")
+    public ResponseEntity<?> updateReview(@RequestBody Map<String, Object> parametros){
+        try {
+            // Comprueba los campos obligatorios
+            String[] requiredFields = {"fecha", "calificacion", "comentario", "gustado", "id_pelicula", "usuario", "revisionados"};
+            for (String field : requiredFields) {
+                if (!parametros.containsKey(field)) {
+                    return new ResponseEntity<>("Missing field: " + field, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            // Parsea y valida los campos
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+            Date fecha = formatter.parse((String) parametros.get("fecha"));
+            float calificacion;
+            if (parametros.get("calificacion") instanceof Integer) {
+                calificacion = (float) (int) parametros.get("calificacion");
+            } else if (parametros.get("calificacion") instanceof Double) {
+                calificacion = (float) (double) parametros.get("calificacion");
+            } else {
+                return new ResponseEntity<>("Invalid field: calificacion", HttpStatus.BAD_REQUEST);
+            }
+            if (calificacion < 0 || calificacion > 5) {
+                return new ResponseEntity<>("Invalid field: calificacion", HttpStatus.BAD_REQUEST);
+            }
+            String comentario = (String) parametros.get("comentario");
+            boolean gustado = (Boolean) parametros.get("gustado");
+            boolean spoiler = (Boolean) parametros.get("spoiler");
+            String idPelicula = (String) parametros.get("id_pelicula");
+            String usuario = (String) parametros.get("usuario");
+            List<Map<String, Object>> revisionados = (List<Map<String, Object>>) parametros.get("revisionados");
+            List<Map<String, Object>> revisionadosNuevos = (List<Map<String, Object>>) parametros.get("revisionadosNuevos");
+
+            // Comprueba que el usuario y la película existen
+            Usuario nomUsuario = usuarioService.findByName(usuario);
+            if (nomUsuario == null) {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
+            Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
+            if (peliculaId.isEmpty()) {
+                return new ResponseEntity<>("Movie not found", HttpStatus.NOT_FOUND);
+            }
+
+            // Se asegura de que la reseña existe
+            Resena existingResena = resenaService.findByUsuarioAndIdPelicula(nomUsuario, peliculaId);
+            if (existingResena == null) {
+                return new ResponseEntity<>("Review not found", HttpStatus.NOT_FOUND);
+            }
+
+            // Actualiza la reseña
+            existingResena.setFecha(fecha);
+            existingResena.setCalificacion(calificacion);
+            existingResena.setComentario(comentario);
+            existingResena.setGustado(gustado);
+            existingResena.setSpoiler(spoiler);
+            existingResena.setIdPelicula(peliculaId.get());
+            existingResena.setNomUsuario(nomUsuario);
+
+            for (Map<String, Object> revisionadoMap : revisionados) {
+                Integer id = (Integer) revisionadoMap.get("id");
+                Revisionado existingRevisionado = revisionadoService.findById(id);
+                if (existingRevisionado != null) {
+                    Date fechaRevisionado = formatter.parse((String) revisionadoMap.get("fechaRevisionado"));
+                    existingRevisionado.setFechaRevisionado(fechaRevisionado);
+                    String comentarioRevisionado = (String) revisionadoMap.get("comentarioRevisionado");
+                    existingRevisionado.setComentarioRevisionado(comentarioRevisionado);
+                    revisionadoService.save(existingRevisionado);
+                }
+            }
+
+            for(Map<String, Object> revisionadoNuevo : revisionadosNuevos){
+                Date fechaRevisionado = formatter.parse((String) revisionadoNuevo.get("fechaRevisionado"));
+                String comentarioRevisionado = (String) revisionadoNuevo.get("comentarioRevisionado");
+                Revisionado revisionado = new Revisionado(fechaRevisionado,  existingResena, comentarioRevisionado);
+                revisionadoService.save(revisionado);
+            }
+
+            resenaService.save(existingResena);
+            usuarioService.updateRango(nomUsuario);
+
+            return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("status", "error", "message", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/review")
+    public ResponseEntity<?> deleteResena(@RequestParam String usuario, @RequestParam String idPelicula, @RequestHeader("Authorization") String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
 
         if(!usuario.equals(jwtTokenProviderService.getUsernameFromJwt(token))){
             Map<String, String> response = new HashMap<>();
@@ -104,13 +235,22 @@ public class ResenaController {
             return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
         }else{
             Usuario usuarioFound = usuarioService.findByName(usuario);
-            System.out.println("usuario: " + usuarioFound);
+            if (usuarioFound == null) {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
             Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-            System.out.println("idPelicula: " + peliculaId);
+            if (peliculaId.isEmpty()) {
+                return new ResponseEntity<>("Movie not found", HttpStatus.NOT_FOUND);
+            }
             try {
                 Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
-                System.out.println("resena: " + resena);
-                return new ResponseEntity<>(resena, HttpStatus.OK);
+                if (resena == null) {
+                    return new ResponseEntity<>("Review not found", HttpStatus.NOT_FOUND);
+                }
+                resenaService.delete(resena);
+                Map<String, String> response = new HashMap<>();
+                response.put("status", "success");
+                return new ResponseEntity<>(response, HttpStatus.OK);
             } catch (Exception e) {
                 Map<String, String> response = new HashMap<>();
                 response.put("status", "error");
@@ -118,136 +258,16 @@ public class ResenaController {
                 return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
-
-    }
-
-    /*@PutMapping("/review")
-    public ResponseEntity<?> editReview(@RequestBody Resena updatedResena) {
-        System.out.println("updatedResena: " + updatedResena);
-        System.out.println("Se ha accedido al put");
-        try {
-            System.out.println("nomUsuario: " + updatedResena.getNomUsuario().getNombre());
-            System.out.println("idPelicula: " + updatedResena.getIdPelicula());
-            Resena existingResena = resenaService.findByUsuarioAndIdPelicula(updatedResena.getNomUsuario(), Optional.ofNullable(updatedResena.getIdPelicula()));
-            System.out.println("existingResena: " + existingResena);
-            if (existingResena != null) {
-                existingResena.setFecha(updatedResena.getFecha());
-                existingResena.setCalificacion(updatedResena.getCalificacion());
-                existingResena.setComentario(updatedResena.getComentario());
-                existingResena.setGustado(updatedResena.isGustado());
-                resenaService.save(existingResena);
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "success");
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "error");
-                response.put("message", "Review not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }*/
-
-    @PutMapping("/review")
-    public ResponseEntity<?> updateReview(@RequestBody Map<String, Object> parametros){
-        System.out.println("Se ha accedido al put");
-        try {
-            String fechaString = (String) parametros.get("fecha");
-            System.out.println("fechaString: " + fechaString);
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-            Date fecha = formatter.parse(fechaString);
-            System.out.println("fecha: " + fecha);
-            float calificacion = 0.0f;
-            if (parametros.get("calificacion") instanceof Integer) {
-                int calificacionInt = (Integer) parametros.get("calificacion");
-                calificacion = (float) calificacionInt;
-            } else if (parametros.get("calificacion") instanceof Double) {
-                double calificacionDouble = (Double) parametros.get("calificacion");
-                calificacion = (float) calificacionDouble;
-            }
-            String comentario = (String) parametros.get("comentario");
-            boolean gustado = (Boolean) parametros.get("gustado");
-            String idPelicula = (String) parametros.get("id_pelicula");
-            String usuario = (String) parametros.get("usuario");
-            List<Map<String, Object>> revisionados = (List<Map<String, Object>>) parametros.get("revisionados");
-            List<Map<String, Object>> revisionadosNuevos = (List<Map<String, Object>>) parametros.get("revisionadosNuevos");
-
-            Usuario nomUsuario = usuarioService.findByName(usuario);
-            System.out.println("nomUsuario: " + nomUsuario);
-            Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-            System.out.println("pelicula: " + peliculaId);
-            Resena existingResena = resenaService.findByUsuarioAndIdPelicula(nomUsuario, Optional.ofNullable(peliculaId.get()));
-            if (existingResena != null) {
-                existingResena.setFecha(fecha);
-                existingResena.setCalificacion(calificacion);
-                existingResena.setComentario(comentario);
-                existingResena.setGustado(gustado);
-                existingResena.setIdPelicula(peliculaId.get());
-                existingResena.setNomUsuario(nomUsuario);
-
-                for (Map<String, Object> revisionadoMap : revisionados) {
-                    Integer id = (Integer) revisionadoMap.get("id");
-                    Revisionado existingRevisionado = revisionadoService.findById(id);
-                    if (existingRevisionado != null) {
-                        String fechaRevisionadoString = (String) revisionadoMap.get("fechaRevisionado");
-                        SimpleDateFormat formatterRevisionado = new SimpleDateFormat("yyyy-MM-dd");
-                        Date fechaRevisionado = formatterRevisionado.parse(fechaRevisionadoString);
-                        existingRevisionado.setFechaRevisionado(fechaRevisionado);
-
-                        String comentarioRevisionado = (String) revisionadoMap.get("comentarioRevisionado");
-                        if (comentarioRevisionado != null) {
-                            existingRevisionado.setComentarioRevisionado(comentarioRevisionado);
-                        }
-
-                        revisionadoService.save(existingRevisionado);
-                    }
-                }
-
-                for(Map<String, Object> revisionadoNuevo : revisionadosNuevos){
-                    String fechaRevisionadoString = (String) revisionadoNuevo.get("fechaRevisionado");
-                    SimpleDateFormat formatterRevisionado = new SimpleDateFormat("yyyy-MM-dd");
-                    Date fechaRevisionado = formatterRevisionado.parse(fechaRevisionadoString);
-                    String comentarioRevisionado = (String) revisionadoNuevo.get("comentarioRevisionado");
-                    Revisionado revisionado = new Revisionado(fechaRevisionado,  existingResena, comentarioRevisionado);
-                    revisionadoService.save(revisionado);
-                }
-
-
-                resenaService.save(existingResena);
-                usuarioService.updateRango(nomUsuario);
-
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "success");
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "error");
-                response.put("message", "Review not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
 
     @GetMapping("/diario/{usuario}")
-    public ResponseEntity<List<EntradaDiarioDTO>> getResenasByUsuario(@PathVariable String usuario) {
+    public ResponseEntity<List<EntradaDiarioDTO>> getDiarioByUsuario(@PathVariable String usuario) {
         Usuario usuarioFound = usuarioService.findByName(usuario);
         if (usuarioFound == null) {
             return ResponseEntity.notFound().build();
         } else {
             List<Resena> resenas = resenaService.findByUsuario(usuarioFound);
-            if (resenas.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            } else {
+
                 List<EntradaDiarioDTO> entradasDiario = new ArrayList<>();
 
                 for (Resena resena : resenas) {
@@ -284,7 +304,6 @@ public class ResenaController {
                 entradasDiario.sort((a, b) -> a.getFecha().compareTo(b.getFecha()));
 
                 return ResponseEntity.ok(entradasDiario);
-            }
             
         }
 
@@ -293,42 +312,53 @@ public class ResenaController {
     @GetMapping("/reviewed/{usuario}/{idPelicula}")
     public ResponseEntity<Map<String, Object>> getResenaPublica(@PathVariable String usuario, @PathVariable String idPelicula) {
         Usuario usuarioFound = usuarioService.findByName(usuario);
-        Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-        Map<String, Object> resenaPublica = new HashMap<>();
-        if (usuarioFound == null || !peliculaId.isPresent()) {
-            return ResponseEntity.notFound().build();
-        } else {
-            Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
-            resenaPublica.put("fecha", resena.getFecha());
-            resenaPublica.put("calificacion", resena.getCalificacion());
-            resenaPublica.put("comentario", resena.getComentario());
-            resenaPublica.put("gustado", resena.isGustado());
-            resenaPublica.put("usuario", usuarioFound.getNombre());
-            resenaPublica.put("idPelicula", peliculaId.get().getId());
-            resenaPublica.put("titulo", peliculaId.get().getTitulo());
-            resenaPublica.put("year", peliculaId.get().getYear());
-            resenaPublica.put("foto", peliculaId.get().getFoto());
-            resenaPublica.put("revisionados", resena.getRevisionados());
-            if (resena == null) {
-                return ResponseEntity.notFound().build();
-            } else {
-                return ResponseEntity.ok(resenaPublica);
-            }
+        if (usuarioFound == null) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
         }
+        Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
+        if (peliculaId.isEmpty()) {
+            //return new ResponseEntity<>(Collections.singletonMap("error", "Movie not found"), HttpStatus.NOT_FOUND);
+        }
+
+        Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
+        if(resena == null){
+            return new ResponseEntity<>(Collections.singletonMap("error", "Review not found"), HttpStatus.NOT_FOUND);
+        }
+        Map<String, Object> resenaPublica = new HashMap<>();
+        resenaPublica.put("fecha", resena.getFecha());
+        resenaPublica.put("calificacion", resena.getCalificacion());
+        resenaPublica.put("comentario", resena.getComentario());
+        resenaPublica.put("gustado", resena.isGustado());
+        resenaPublica.put("spoiler", resena.isSpoiler());
+        resenaPublica.put("usuario", usuarioFound.getNombre());
+        resenaPublica.put("idPelicula", peliculaId.get().getId());
+        resenaPublica.put("titulo", peliculaId.get().getTitulo());
+        resenaPublica.put("year", peliculaId.get().getYear());
+        resenaPublica.put("foto", peliculaId.get().getFoto());
+        resenaPublica.put("revisionados", resena.getRevisionados());
+        return ResponseEntity.ok(resenaPublica);
     }
 
     @GetMapping("/reviewed/{idPelicula}")
-    public ResponseEntity<List<Resena>> getResenasPublicas(@PathVariable String idPelicula) {
+    public ResponseEntity<?> getResenasPublicas(@PathVariable String idPelicula) {
         Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-        if (!peliculaId.isPresent()) {
+        //if (peliculaId.isEmpty()) {
+            //return new ResponseEntity<>(Collections.singletonMap("message", "No reviews found"), HttpStatus.NO_CONTENT);
+        //} else {
+            List<Resena> resenas = resenaService.findByIdPelicula(peliculaId);
+            return ResponseEntity.ok(resenas);
+
+        //}
+    }
+
+    @GetMapping("/{usuario}/reviewed")
+    public ResponseEntity<List<Resena>> getResenasByUsuario(@PathVariable String usuario) {
+        Usuario usuarioFound = usuarioService.findByName(usuario);
+        if (usuarioFound == null) {
             return ResponseEntity.notFound().build();
         } else {
-            List<Resena> resenas = resenaService.findByIdPelicula(peliculaId);
-            if (resenas.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            } else {
-                return ResponseEntity.ok(resenas);
-            }
+            List<Resena> resenas = resenaService.findByUsuario(usuarioFound);
+            return ResponseEntity.ok(resenas);
         }
     }
 
@@ -336,30 +366,30 @@ public class ResenaController {
     public ResponseEntity<List<Resena>> getLastActivity(@PathVariable String usuario) {
         Usuario usuarioFound = usuarioService.findByName(usuario);
         if (usuarioFound == null) {
-            return ResponseEntity.notFound().build();
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             List<Resena> resenas = resenaService.findTop4ByUsuarioOrderByLatestActivityDesc(usuarioFound);
-            if (resenas.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            } else {
-                return ResponseEntity.ok(resenas);
-            }
+            return ResponseEntity.ok(resenas);
         }
     }
 
     @GetMapping("/reviewed")
-    public ResponseEntity<Resena> getResena(@RequestParam int id) {
+    public ResponseEntity<?> getResena(@RequestParam int id) {
         Resena resena = resenaService.findById(id);
         if (resena == null) {
-            return ResponseEntity.notFound().build();
+            return new ResponseEntity<>(Collections.singletonMap("message", "No review found"), HttpStatus.NO_CONTENT);
         } else {
             return ResponseEntity.ok(resena);
         }
     }
 
     @GetMapping("/reviewed/top4")
-    public ResponseEntity<List<Pelicula>> getTop4PeliculasWithMostResenas() {
+    public ResponseEntity<?> getTop4PeliculasWithMostResenas() {
         List<Pelicula> topPeliculas = resenaService.findTop4PeliculasWithMostResenas();
-        return new ResponseEntity<>(topPeliculas, HttpStatus.OK);
+        if (topPeliculas.isEmpty()){
+            return new ResponseEntity<>(Collections.singletonMap("message", "No movies with reviews found"), HttpStatus.NO_CONTENT);
+        }else{
+            return new ResponseEntity<>(topPeliculas, HttpStatus.OK);
+        }
     }
 }

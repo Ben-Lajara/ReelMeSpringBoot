@@ -17,6 +17,7 @@ public class Resena {
     private float calificacion;
     private String comentario;
     private boolean gustado;
+    private boolean spoiler;
 
     @ManyToOne
     @JoinColumn(name = "id_pelicula")
@@ -55,6 +56,16 @@ public class Resena {
         this.gustado = gustado;
         this.idPelicula = idPelicula;
         this.nomUsuario = nomUsuario;
+    }
+
+    public Resena(Date fecha, float calificacion, String comentario, boolean gustado, boolean spoiler, Pelicula idPelicula, Usuario nomUsuario) {
+        this.fecha = fecha;
+        this.calificacion = calificacion;
+        this.comentario = comentario;
+        this.gustado = gustado;
+        this.idPelicula = idPelicula;
+        this.nomUsuario = nomUsuario;
+        this.spoiler = spoiler;
     }
 
     public int getId() {
@@ -136,6 +147,14 @@ public class Resena {
 
     public void setRevisionado(boolean revisionado) {
         isRevisionado = revisionado;
+    }
+
+    public boolean isSpoiler() {
+        return spoiler;
+    }
+
+    public void setSpoiler(boolean spoiler) {
+        this.spoiler = spoiler;
     }
 
     @Override

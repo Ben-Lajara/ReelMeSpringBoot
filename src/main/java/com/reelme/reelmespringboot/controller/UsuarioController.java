@@ -51,12 +51,20 @@ public class UsuarioController {
 
     @PostMapping("/usuario/register")
     public ResponseEntity<?> register(@RequestBody Usuario usuario) {
+        Usuario existingUser = usuarioService.findByName(usuario.getNombre());
+        if (existingUser != null) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "Username is already in use"), HttpStatus.CONFLICT);
+        }
+        existingUser = usuarioService.findByEmail(usuario.getEmail());
+        if (existingUser != null) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "Email is already in use"), HttpStatus.CONFLICT);
+        }
         String pwordHash = BCrypt.hashpw(usuario.getPword(), BCrypt.gensalt());
         usuario.setPword(pwordHash);
         usuario.setPerfil("PruebaPerfil.jpg");
         usuario.setRoles(Collections.singleton(rolRepository.findByRol("ROLE_USER")));
         usuarioService.save(usuario);
-        return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
     @PostMapping("/usuario/login")
@@ -86,12 +94,18 @@ public class UsuarioController {
 
     @PostMapping("/usuario/loginNombreEmail")
     public ResponseEntity<?> loginNombreEmail(@RequestParam String nombreEmail, @RequestParam String pword) {
+        if (nombreEmail == null || nombreEmail.trim().isEmpty()) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "Username/Email cannot be empty"), HttpStatus.BAD_REQUEST);
+        }
         Usuario existingUser = usuarioService.findByName(nombreEmail);
         if (existingUser == null) {
             existingUser = usuarioService.findByEmail(nombreEmail);
+            if(existingUser == null){
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
         }
         //if (existingUser != null && existingUser.getPword().equals(pword)) {
-        if (existingUser != null && BCrypt.checkpw(pword, existingUser.getPword())) {
+        if (BCrypt.checkpw(pword, existingUser.getPword())) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("usuario", existingUser);
@@ -106,14 +120,23 @@ public class UsuarioController {
 
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Collections.singletonMap("error", "Incorrect password"), HttpStatus.UNAUTHORIZED);
         }
     }
 
     @GetMapping("/usuario/seguidos/{nombre}")
-    public ResponseEntity<List<Map<String, Object>>> getSeguidos(@PathVariable String nombre) {
+    public ResponseEntity<?> getSeguidos(@PathVariable String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "Username cannot be empty"), HttpStatus.BAD_REQUEST);
+        }
         Usuario usuarioFound = usuarioService.findByName(nombre);
+        if(usuarioFound == null){
+            return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+        }
         List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
+        if(seguidos.isEmpty()){
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+        }
         List<Map<String, Object>> seguidosCompletos = new ArrayList<>();
         for (UsuariosSeguidos seguido : seguidos) {
             Usuario usuario = usuarioService.findByName(seguido.getUsuarioSeguido().getNombre());
@@ -138,38 +161,51 @@ public class UsuarioController {
             }
 
         }
-        for(Map<String, Object> seguidoCompleto : seguidosCompletos) {
-            System.out.println(seguidoCompleto);
-        }
-
         return ResponseEntity.ok(seguidosCompletos);
     }
 
     @GetMapping("/usuario/{nombre}/seguidos/reviewed")
-    public ResponseEntity<List<Resena>> getResenasRecientesSeguidos(@PathVariable String nombre) {
-        Usuario usuarioFound = usuarioService.findByName(nombre);
-        List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
-        List<Resena> resenasSeguidos = new ArrayList<>();
-        for (UsuariosSeguidos seguido : seguidos) {
-            Usuario usuario = usuarioService.findByName(seguido.getUsuarioSeguido().getNombre());
-            List<Resena> resenasUsuario = resenaService.findByUsuario(usuario);
-            Resena resena = resenasUsuario.stream()
-                    .sorted(Comparator.comparing(Resena::getFecha).reversed())
-                    .findFirst()
-                    .orElse(null);
-            if(resena != null){
-                resenasSeguidos.add(resena);
+    public ResponseEntity<?> getResenasRecientesSeguidos(@PathVariable String nombre) {
+        try{
+            Usuario usuarioFound = usuarioService.findByName(nombre);
+            if(usuarioFound == null){
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
+            List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
+            List<Resena> resenasSeguidos = new ArrayList<>();
+            for (UsuariosSeguidos seguido : seguidos) {
+                Usuario usuario = usuarioService.findByName(seguido.getUsuarioSeguido().getNombre());
+                List<Resena> resenasUsuario = resenaService.findByUsuario(usuario);
+                Resena resena = resenasUsuario.stream()
+                        .sorted(Comparator.comparing(Resena::getFecha).reversed())
+                        .findFirst()
+                        .orElse(null);
+                if(resena != null){
+                    resenasSeguidos.add(resena);
+                }
 
+            }
+            return ResponseEntity.ok(resenasSeguidos);
+        }catch (Exception e){
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return ResponseEntity.ok(resenasSeguidos);
+
     }
 
     @GetMapping("/usuarios")
-    public ResponseEntity<List<Usuario>> getUsuarios(){
-        List<Usuario> usuarios = usuarioService.findAll();
-        return ResponseEntity.ok(usuarios);
+    public ResponseEntity<?> getUsuarios(){
+        try{
+            List<Usuario> usuarios = usuarioService.findAll();
+            if(usuarios.isEmpty()){
+                return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+            }else{
+                return ResponseEntity.ok(usuarios);
+            }
+        }catch (Exception e){
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
     }
 
     @GetMapping("/usuario/{nombre}")
@@ -184,39 +220,47 @@ public class UsuarioController {
 
     @GetMapping("/usuario/about/{usuario}")
     public ResponseEntity<Map<String, Object>> getAbout(@PathVariable String usuario){
-        Usuario usuarioFound = usuarioService.findByName(usuario);
-        if(usuarioFound == null){
-            return ResponseEntity.notFound().build();
-        }else{
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.DAY_OF_YEAR, 1);
-            Date start = calendar.getTime();
+        try {
+            Usuario usuarioFound = usuarioService.findByName(usuario);
+            if (usuarioFound == null) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            } else {
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.DAY_OF_YEAR, 1);
+                Date start = calendar.getTime();
 
-            calendar.set(Calendar.DAY_OF_YEAR, calendar.getActualMaximum(Calendar.DAY_OF_YEAR));
-            Date end = calendar.getTime();
-            Map<String, Object> about = new HashMap<>();
-            about.put("nombre", usuarioFound.getNombre());
-            about.put("apodo", usuarioFound.getApodo());
-            about.put("direccion", usuarioFound.getDireccion());
-            about.put("perfil", usuarioFound.getPerfil());
-            about.put("color", usuarioFound.getColor());
-            about.put("bio", usuarioFound.getBio());
-            about.put("vistas", resenaService.countByUsuario(usuarioFound));
-            about.put("vistasYear", resenaService.countByFechaBetweenAndNomUsuario(start, end, usuarioFound));
-            about.put("seguidores", usuariosSeguidosService.countByUsuarioSeguido(usuarioFound));
-            about.put("seguidos", usuariosSeguidosService.countByNombreUsuario(usuarioFound));
-            about.put("rango", usuarioFound.getRango());
-            return ResponseEntity.ok(about);
+                calendar.set(Calendar.DAY_OF_YEAR, calendar.getActualMaximum(Calendar.DAY_OF_YEAR));
+                Date end = calendar.getTime();
+                Map<String, Object> about = new HashMap<>();
+                about.put("nombre", usuarioFound.getNombre());
+                about.put("apodo", usuarioFound.getApodo());
+                about.put("direccion", usuarioFound.getDireccion());
+                about.put("perfil", usuarioFound.getPerfil());
+                about.put("color", usuarioFound.getColor());
+                about.put("bio", usuarioFound.getBio());
+                about.put("vistas", resenaService.countByUsuario(usuarioFound));
+                about.put("vistasYear", resenaService.countByFechaBetweenAndNomUsuario(start, end, usuarioFound));
+                about.put("seguidores", usuariosSeguidosService.countByUsuarioSeguido(usuarioFound));
+                about.put("seguidos", usuariosSeguidosService.countByNombreUsuario(usuarioFound));
+                about.put("rango", usuarioFound.getRango());
+                return ResponseEntity.ok(about);
+            }
+        }catch (Exception e){
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("/usuarios/{nombre}")
     public ResponseEntity<List<Usuario>> getUsuariosLike(@PathVariable String nombre) {
-        List<Usuario> usuariosLike = usuarioService.findByNombreContaining(nombre);
-        if (usuariosLike.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        } else {
-            return ResponseEntity.ok(usuariosLike);
+        try {
+            List<Usuario> usuariosLike = usuarioService.findByNombreContaining(nombre);
+            if (usuariosLike.isEmpty()) {
+                return new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
+            } else {
+                return ResponseEntity.ok(usuariosLike);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -263,33 +307,31 @@ public class UsuarioController {
     public ResponseEntity<?> editPword(@RequestBody Usuario updatedUsuario) {
         try {
             Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
-            System.out.println(existingUsuario.getNombre());
             if (existingUsuario != null) {
                 String pwordHash = BCrypt.hashpw(updatedUsuario.getPword(), BCrypt.gensalt());
                 existingUsuario.setPword(pwordHash);
                 usuarioService.save(existingUsuario);
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "success");
-                return new ResponseEntity<>(response, HttpStatus.OK);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
             } else {
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "error");
-                response.put("message", "Usuario not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("/usuario/numResenas/{nombre}")
-    public ResponseEntity<Integer> getNumResenas(@PathVariable String nombre){
-        Usuario usuario = usuarioService.findByName(nombre);
-        int numResenas = resenaService.countByUsuario(usuario);
-        return ResponseEntity.ok(numResenas);
+    public ResponseEntity<?> getNumResenas(@PathVariable String nombre){
+        try {
+            Usuario usuario = usuarioService.findByName(nombre);
+            if (usuario == null) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+            int numResenas = resenaService.countByUsuario(usuario);
+            return ResponseEntity.ok(numResenas);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PutMapping("/usuario/color")
@@ -299,20 +341,12 @@ public class UsuarioController {
             if (existingUsuario != null) {
                 existingUsuario.setColor(updatedUsuario.getColor());
                 usuarioService.save(existingUsuario);
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "success");
-                return new ResponseEntity<>(response, HttpStatus.OK);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
             } else {
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "error");
-                response.put("message", "Usuario not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -351,39 +385,30 @@ public class UsuarioController {
                 existingUsuario.setApodo(updatedUsuario.getApodo());
                 existingUsuario.setDireccion(updatedUsuario.getDireccion());
                 usuarioService.save(existingUsuario);
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "success");
-                return new ResponseEntity<>(response, HttpStatus.OK);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
             } else {
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "error");
-                response.put("message", "Usuario not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @PutMapping("/usuario/vetar")
     public ResponseEntity<?> vetar(@RequestParam String nombre, @RequestParam String duracionString) throws Exception{
-        SimpleDateFormat formateador = new SimpleDateFormat("dd/MM/yyyy, HH:mm:ss");
-        Date duracionVeto = formateador.parse(duracionString);
-        try{
+        try {
+            SimpleDateFormat formateador = new SimpleDateFormat("dd/MM/yyyy, HH:mm:ss");
+            Date duracionVeto = formateador.parse(duracionString);
             Usuario usuario = usuarioService.findByName(nombre);
-            usuario.setVeto(duracionVeto);
-            usuarioService.save(usuario);
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            if (usuario != null) {
+                usuario.setVeto(duracionVeto);
+                usuarioService.save(usuario);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -391,16 +416,15 @@ public class UsuarioController {
     public ResponseEntity<?> levantarVeto(@RequestParam String nombre){
         try{
             Usuario usuario = usuarioService.findByName(nombre);
-            usuario.setVeto(null);
-            usuarioService.save(usuario);
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            if (usuario != null) {
+                usuario.setVeto(null);
+                usuarioService.save(usuario);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

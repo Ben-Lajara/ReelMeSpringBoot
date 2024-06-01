@@ -12,10 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -30,65 +27,105 @@ public class UsuariosSeguidosController {
     private ResenaService resenaService;
 
     @GetMapping("/usuarios/seguidosPor/{nombre}")
-    public ResponseEntity<UsuariosSeguidos> getSeguidos(@PathVariable String nombre) {
-        Usuario usuarioFound = usuarioService.findByName(nombre);
-        List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
-        return new ResponseEntity(seguidos, HttpStatus.OK);
+    public ResponseEntity<?> getSeguidos(@PathVariable String nombre) {
+        try {
+            Usuario usuarioFound = usuarioService.findByName(nombre);
+            if (usuarioFound != null) {
+                List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
+                return new ResponseEntity<>(seguidos, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("/usuarios/seguidoresDe/{nombre}")
-    public ResponseEntity<UsuariosSeguidos> getSeguidores(@PathVariable String nombre) {
-        Usuario usuarioFound = usuarioService.findByName(nombre);
-        List<UsuariosSeguidos> seguidores = usuariosSeguidosService.findByUsuarioSeguido(usuarioFound);
-        return new ResponseEntity(seguidores, HttpStatus.OK);
+    public ResponseEntity<?> getSeguidores(@PathVariable String nombre) {
+        try {
+            Usuario usuarioFound = usuarioService.findByName(nombre);
+            if (usuarioFound != null) {
+                List<UsuariosSeguidos> seguidores = usuariosSeguidosService.findByUsuarioSeguido(usuarioFound);
+                return new ResponseEntity<>(seguidores, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping("/usuario/seguir")
     public ResponseEntity<?> seguir(@RequestBody Map<String, Object> parametros){
-        String usuario = (String) parametros.get("nombreUsuario");
-        String nombreUsuarioSeguido = (String) parametros.get("usuarioSeguido");
-        Usuario nombreUsuario = usuarioService.findByName(usuario);
-        Usuario usuarioSeguido = usuarioService.findByName(nombreUsuarioSeguido);
-        UsuariosSeguidos usuariosSeguidos = new UsuariosSeguidos(nombreUsuario, usuarioSeguido);
-        usuariosSeguidosService.save(usuariosSeguidos);
-        return new ResponseEntity<>(HttpStatus.OK);
+        try {
+            String usuario = (String) parametros.get("nombreUsuario");
+            String nombreUsuarioSeguido = (String) parametros.get("usuarioSeguido");
+            Usuario nombreUsuario = usuarioService.findByName(usuario);
+            Usuario usuarioSeguido = usuarioService.findByName(nombreUsuarioSeguido);
+            if (nombreUsuario != null && usuarioSeguido != null) {
+                UsuariosSeguidos usuariosSeguidos = new UsuariosSeguidos(nombreUsuario, usuarioSeguido);
+                usuariosSeguidosService.save(usuariosSeguidos);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @DeleteMapping("/usuario/dejarDeSeguir")
     public ResponseEntity<?> dejarDeSeguir(@RequestBody Map<String, Object> parametros){
-        String usuario = (String) parametros.get("nombreUsuario");
-        String nombreUsuarioSeguido = (String) parametros.get("usuarioSeguido");
-        Usuario nombreUsuario = usuarioService.findByName(usuario);
-        Usuario usuarioSeguido = usuarioService.findByName(nombreUsuarioSeguido);
-        UsuariosSeguidos usuariosSeguidos = new UsuariosSeguidos(nombreUsuario, usuarioSeguido);
-        usuariosSeguidosService.delete(usuariosSeguidos);
-        return new ResponseEntity<>(HttpStatus.OK);
+        try {
+            String usuario = (String) parametros.get("nombreUsuario");
+            String nombreUsuarioSeguido = (String) parametros.get("usuarioSeguido");
+            Usuario nombreUsuario = usuarioService.findByName(usuario);
+            Usuario usuarioSeguido = usuarioService.findByName(nombreUsuarioSeguido);
+            if (nombreUsuario != null && usuarioSeguido != null) {
+                UsuariosSeguidos usuariosSeguidos = new UsuariosSeguidos(nombreUsuario, usuarioSeguido);
+                usuariosSeguidosService.delete(usuariosSeguidos);
+                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("/resenasSeguidosPor/{nombre}/{idPelicula}")
-    public ResponseEntity<List<Map<String, Object>>> getResenasSeguidos(@PathVariable String nombre, @PathVariable String idPelicula) {
-        Usuario usuarioFound = usuarioService.findByName(nombre);
-        List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
-        List<Map<String, Object>> resenasSeguidos = new ArrayList<>();
-        for (UsuariosSeguidos seguido : seguidos) {
-            Usuario usuario = usuarioService.findByName(seguido.getUsuarioSeguido().getNombre());
-            List<Resena> resenasUsuario = resenaService.findByUsuario(usuario);
-            Resena resena = resenasUsuario.stream()
-                    .filter(r -> r.getIdPelicula().getId().equals(idPelicula))
-                    .findFirst()
-                    .orElse(null);
-            if (resena != null) {
-                Map<String, Object> resenaMap = new HashMap<>();
-                resenaMap.put("usuario", usuario.getNombre());
-                resenaMap.put("perfil", usuario.getPerfil());
-                resenaMap.put("color", usuario.getColor());
-                resenaMap.put("calificacion", resena.getCalificacion());
-                resenaMap.put("comentario", resena.getComentario());
-                resenaMap.put("gustado", resena.isGustado());
-                resenasSeguidos.add(resenaMap);
+    public ResponseEntity<?> getResenasSeguidos(@PathVariable String nombre, @PathVariable String idPelicula) {
+        try {
+            Usuario usuarioFound = usuarioService.findByName(nombre);
+            if (usuarioFound != null) {
+                List<UsuariosSeguidos> seguidos = usuariosSeguidosService.findByNombreUsuario(usuarioFound);
+                List<Map<String, Object>> resenasSeguidos = new ArrayList<>();
+                for (UsuariosSeguidos seguido : seguidos) {
+                    Usuario usuario = usuarioService.findByName(seguido.getUsuarioSeguido().getNombre());
+                    List<Resena> resenasUsuario = resenaService.findByUsuario(usuario);
+                    Resena resena = resenasUsuario.stream()
+                            .filter(r -> r.getIdPelicula().getId().equals(idPelicula))
+                            .findFirst()
+                            .orElse(null);
+                    if (resena != null) {
+                        Map<String, Object> resenaMap = new HashMap<>();
+                        resenaMap.put("usuario", usuario.getNombre());
+                        resenaMap.put("perfil", usuario.getPerfil());
+                        resenaMap.put("color", usuario.getColor());
+                        resenaMap.put("calificacion", resena.getCalificacion());
+                        resenaMap.put("comentario", resena.getComentario());
+                        resenaMap.put("gustado", resena.isGustado());
+                        resenasSeguidos.add(resenaMap);
+                    }
+                }
+                return new ResponseEntity<>(resenasSeguidos, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity(resenasSeguidos, HttpStatus.OK);
     }
 
 
