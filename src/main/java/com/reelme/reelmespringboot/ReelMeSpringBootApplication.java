@@ -21,7 +21,7 @@ public class ReelMeSpringBootApplication {
 	@Bean
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200", "http://www.omdbapi.com"));
+		configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200", "http://www.omdbapi.com", "https://api.themoviedb.org", "https://www.themoviedb.org", "https://image.tmdb.org"));
 		configuration.setAllowedMethods(Arrays.asList("GET","POST"));
 		configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
