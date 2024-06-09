@@ -11,6 +11,6 @@ public interface UsuarioRepository extends CrudRepository<Usuario, String> {
 
     List<Usuario> findByNombreLike(String nombre);
     List<Usuario> findByNombreContaining(String nombre);
-
+    List<Usuario> findAllByVetoIsNotNull();
     Usuario findByEmail(String email);
 }

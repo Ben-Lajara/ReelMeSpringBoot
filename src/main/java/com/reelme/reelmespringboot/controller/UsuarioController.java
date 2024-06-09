@@ -82,6 +82,8 @@ public class UsuarioController {
     @DeleteMapping("/usuario/delete")
     public ResponseEntity<?> delete(@RequestParam String pword, @RequestParam String nombre) {
         Usuario existingUser = usuarioService.findByName(nombre);
+        System.out.println("Usuario encontrado: " + existingUser.getNombre());
+        System.out.println("pword: " + pword);
         if (existingUser != null && BCrypt.checkpw(pword, existingUser.getPword())) {
             usuarioService.delete(existingUser);
             Map<String, String> response = new HashMap<>();

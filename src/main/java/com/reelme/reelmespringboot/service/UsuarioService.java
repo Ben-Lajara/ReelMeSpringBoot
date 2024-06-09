@@ -4,6 +4,7 @@ import com.reelme.reelmespringboot.model.Rango;
 import com.reelme.reelmespringboot.model.Usuario;
 import com.reelme.reelmespringboot.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -72,5 +73,17 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByNombre(nombre);
         usuario.setVeto(duracionVeto);
         usuarioRepository.save(usuario);
+    }
+
+    @Scheduled(fixedRate = 600000)
+    public void quitarVetos() {
+        List<Usuario> usuarios = usuarioRepository.findAllByVetoIsNotNull();
+        Date ahora = new Date();
+        for (Usuario usuario : usuarios) {
+            if (usuario.getVeto().before(ahora)) {
+                usuario.setVeto(null);
+                usuarioRepository.save(usuario);
+            }
+        }
     }
 }
