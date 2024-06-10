@@ -98,8 +98,9 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 
 		Usuario darioCinefilo = new Usuario();
 		darioCinefilo.setNombre("darioCinefilo");
-		darioCinefilo.setPword("1234");
+		darioCinefilo.setPword("123456");
 		darioCinefilo.setEmail("dario@gmail.com");
+		darioCinefilo.setApodo("Darío");
 		String pwordHash = BCrypt.hashpw(darioCinefilo.getPword(), BCrypt.gensalt());
 		darioCinefilo.setPword(pwordHash);
 		darioCinefilo.setPerfil("palomitasPerfil.jpg");
@@ -109,17 +110,19 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		Usuario valerioVePelis = new Usuario();
 		valerioVePelis.setNombre("valerioVePelis");
 		valerioVePelis.setEmail("valerio@gmail.com");
-		valerioVePelis.setPword("1234");
+		valerioVePelis.setPword("123456");
+		valerioVePelis.setApodo("Valerio");
 		String pwordHashValerio = BCrypt.hashpw(valerioVePelis.getPword(), BCrypt.gensalt());
 		valerioVePelis.setPword(pwordHashValerio);
-		valerioVePelis.setPerfil("claquetaPerfil.jpg");
+		valerioVePelis.setPerfil("carretePerfil.jpg");
 		valerioVePelis.setRoles(Collections.singleton(rolRepository.findByRol("ROLE_USER")));
 		usuarioService.save(valerioVePelis);
 
 		Usuario dashaAmanteCine = new Usuario();
 		dashaAmanteCine.setNombre("dashaAmanteCine");
 		dashaAmanteCine.setEmail("dasha@gmail.com");
-		dashaAmanteCine.setPword("1234");
+		dashaAmanteCine.setPword("123456");
+		dashaAmanteCine.setApodo("Dasha");
 		String pwordHashDasha = BCrypt.hashpw(dashaAmanteCine.getPword(), BCrypt.gensalt());
 		dashaAmanteCine.setPword(pwordHashDasha);
 		dashaAmanteCine.setPerfil("butacasPerfil.jpg");
@@ -128,8 +131,9 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 
 		Usuario nandoMovieLover = new Usuario();
 		nandoMovieLover.setNombre("nandoMovieLover");
+		nandoMovieLover.setApodo("Nando");
 		nandoMovieLover.setEmail("nando@gmail.com");
-		nandoMovieLover.setPword("1234");
+		nandoMovieLover.setPword("123456");
 		String pwordHashNando = BCrypt.hashpw(nandoMovieLover.getPword(), BCrypt.gensalt());
 		nandoMovieLover.setPword(pwordHashNando);
 		nandoMovieLover.setPerfil("claquetaPerfil.jpg");
@@ -138,8 +142,9 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 
 		Usuario eliCinefila = new Usuario();
 		eliCinefila.setNombre("eliCinefila");
-		eliCinefila.setPword("1234");
+		eliCinefila.setPword("123456");
 		eliCinefila.setEmail("eli@gmail.com");
+		eliCinefila.setApodo("Eli");
 		String pwordHashEli = BCrypt.hashpw(eliCinefila.getPword(), BCrypt.gensalt());
 		eliCinefila.setPword(pwordHashEli);
 		eliCinefila.setPerfil("carretePerfil.jpg");
@@ -149,7 +154,8 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		Usuario rubenLovesMovies = new Usuario();
 		rubenLovesMovies.setNombre("rubenLovesMovies");
 		rubenLovesMovies.setEmail("rlajaraoton@gmail.com");
-		rubenLovesMovies.setPword("1234");
+		rubenLovesMovies.setApodo("Rubén");
+		rubenLovesMovies.setPword("123456");
 		String pwordHashRuben = BCrypt.hashpw(rubenLovesMovies.getPword(), BCrypt.gensalt());
 		rubenLovesMovies.setPword(pwordHashRuben);
 		rubenLovesMovies.setPerfil("claquetaPerfil.jpg");
@@ -364,7 +370,7 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		resenaNandoElResplandor.setCalificacion(3);
 		resenaNandoElResplandor.setComentario("Demasiao aburrida");
 		resenaNandoElResplandor.setGustado(false);
-		resenaNandoElResplandor.setFecha(new Date("2024/05/20"));
+		resenaNandoElResplandor.setFecha(new Date("2024/03/20"));
 		resenaRepository.save(resenaNandoElResplandor);
 
 		Resena resenaNandoElRetornoDelJedi = new Resena();
@@ -411,8 +417,69 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		resenaEliElSenorDeLosAnillos.setSpoiler(true);
 		resenaEliElSenorDeLosAnillos.setComentario("Es la mejor adaptación, aunque pongan la muerte de Boromir al final");
 		resenaEliElSenorDeLosAnillos.setGustado(true);
-		resenaEliElSenorDeLosAnillos.setFecha(new Date("2024/04/10"));
+		resenaEliElSenorDeLosAnillos.setFecha(new Date("2024/04/14"));
 		resenaRepository.save(resenaEliElSenorDeLosAnillos);
+
+		Resena resenaRubenElPadrino = new Resena();
+		resenaRubenElPadrino.setIdPelicula(elPadrino);
+		resenaRubenElPadrino.setNomUsuario(rubenLovesMovies);
+		resenaRubenElPadrino.setCalificacion(5);
+		resenaRubenElPadrino.setComentario("Una obra maestra del cine");
+		resenaRubenElPadrino.setGustado(true);
+		resenaRubenElPadrino.setFecha(new Date("2024/02/02"));
+		resenaRepository.save(resenaRubenElPadrino);
+
+		Resena resenaRubenRegresoAlFuturo = new Resena();
+		resenaRubenRegresoAlFuturo.setIdPelicula(regresoAlFuturo);
+		resenaRubenRegresoAlFuturo.setNomUsuario(rubenLovesMovies);
+		resenaRubenRegresoAlFuturo.setCalificacion(5);
+		resenaRubenRegresoAlFuturo.setComentario("Una de las mejores películas de la historia del cine");
+		resenaRubenRegresoAlFuturo.setGustado(true);
+		resenaRubenRegresoAlFuturo.setFecha(new Date("2024/03/02"));
+		resenaRepository.save(resenaRubenRegresoAlFuturo);
+
+		Resena resenaRubenElSenorDeLosAnillos = new Resena();
+		resenaRubenElSenorDeLosAnillos.setIdPelicula(elSenorDeLosAnillos);
+		resenaRubenElSenorDeLosAnillos.setNomUsuario(rubenLovesMovies);
+		resenaRubenElSenorDeLosAnillos.setCalificacion(5);
+		resenaRubenElSenorDeLosAnillos.setComentario("Es mi favorita");
+		resenaRubenElSenorDeLosAnillos.setGustado(true);
+		resenaRubenElSenorDeLosAnillos.setFecha(new Date("2024/03/01"));
+		resenaRepository.save(resenaRubenElSenorDeLosAnillos);
+
+		Resena resenaRubenElReyLeon = new Resena();
+		resenaRubenElReyLeon.setIdPelicula(elReyLeon);
+		resenaRubenElReyLeon.setNomUsuario(rubenLovesMovies);
+		resenaRubenElReyLeon.setCalificacion(4.5f);
+		resenaRubenElReyLeon.setComentario("Una de las mejores películas de Disney");
+		resenaRubenElReyLeon.setGustado(true);
+		resenaRubenElReyLeon.setFecha(new Date("2024/04/15"));
+		resenaRepository.save(resenaRubenElReyLeon);
+
+		Resena resenaRubenElResplandor = new Resena();
+		resenaRubenElResplandor.setIdPelicula(elResplandor);
+		resenaRubenElResplandor.setNomUsuario(rubenLovesMovies);
+		resenaRubenElResplandor.setCalificacion(4);
+		resenaRubenElResplandor.setComentario("Kubrick se lució");
+		resenaRubenElResplandor.setGustado(true);
+		resenaRubenElResplandor.setFecha(new Date("2024/01/12"));
+		resenaRepository.save(resenaRubenElResplandor);
+
+		Resena resenaRubenSpiderMan = new Resena();
+		resenaRubenSpiderMan.setIdPelicula(spiderMan);
+		resenaRubenSpiderMan.setNomUsuario(rubenLovesMovies);
+		resenaRubenSpiderMan.setCalificacion(4);
+		resenaRubenSpiderMan.setComentario("Me gusta más que las siguientes");
+		resenaRubenSpiderMan.setGustado(true);
+		resenaRubenSpiderMan.setFecha(new Date("2024/02/16"));
+
+		Resena resenaRubenElRetornoDelJedi = new Resena();
+		resenaRubenElRetornoDelJedi.setIdPelicula(elRetornoDelJedi);
+		resenaRubenElRetornoDelJedi.setNomUsuario(rubenLovesMovies);
+		resenaRubenElRetornoDelJedi.setCalificacion(4);
+		resenaRubenElRetornoDelJedi.setComentario("La mejor es la anterior pero sigue estando bien");
+		resenaRubenElRetornoDelJedi.setGustado(true);
+		resenaRubenElRetornoDelJedi.setFecha(new Date("2024/02/22"));
 
 		Resena resenaRubenGodzillaMinusOne = new Resena();
 		resenaRubenGodzillaMinusOne.setIdPelicula(godzillaMinusOne);
