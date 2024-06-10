@@ -67,18 +67,6 @@ public class UsuarioController {
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
-    @PostMapping("/usuario/login")
-    public ResponseEntity<?> login(@RequestBody Usuario usuario) {
-        Usuario existingUser = usuarioService.findByName(usuario.getNombre());
-        if (existingUser != null && existingUser.getPword().equals(usuario.getPword())) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-    }
-
     @DeleteMapping("/usuario/delete")
     public ResponseEntity<?> delete(@RequestParam String pword, @RequestParam String nombre) {
         Usuario existingUser = usuarioService.findByName(nombre);
@@ -106,11 +94,14 @@ public class UsuarioController {
                 return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
         }
-        //if (existingUser != null && existingUser.getPword().equals(pword)) {
         if (BCrypt.checkpw(pword, existingUser.getPword())) {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
-            response.put("usuario", existingUser);
+            //response.put("usuario", existingUser);
+            response.put("username", existingUser.getNombre());
+            response.put("perfil", existingUser.getPerfil());
+            response.put("veto", existingUser.getVeto());
+            response.put("color", existingUser.getColor());
 
             List<String> roles = existingUser.getRoles().stream()
                     .map(Rol::getRol)
@@ -123,6 +114,18 @@ public class UsuarioController {
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(Collections.singletonMap("error", "Incorrect password"), HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @PutMapping("/usuario/perfil")
+    public ResponseEntity<?> setPerfil(@RequestParam String nombre, @RequestParam String perfil) {
+        Usuario usuario = usuarioService.findByName(nombre);
+        if (usuario != null) {
+            usuario.setPerfil(perfil);
+            usuarioService.save(usuario);
+            return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
         }
     }
 
@@ -266,44 +269,7 @@ public class UsuarioController {
         }
     }
 
-    private final String UPLOAD_DIR = "src/main/resources/static/uploads/";
 
-    public void saveFile(MultipartFile file) throws IOException {
-        try{
-            System.out.println("Se ejecuta saveFile");
-            if (!file.isEmpty()) {
-                System.out.println("El archivo no está vacío");
-                byte[] bytes = file.getBytes();
-                System.out.println(bytes);
-                Path path = Paths.get(UPLOAD_DIR + file.getOriginalFilename());
-                System.out.println(path);
-                Files.write(path, bytes);
-                System.out.println("Después de Files.write");
-            }
-        }catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @PostMapping("/usuario/upload")
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("nombre") String nombre){
-        try {
-            // Guarda el archivo en el sistema de archivos
-            System.out.println(nombre);
-            System.out.println(file.getOriginalFilename());
-            saveFile(file);
-            System.out.println("Después de saveFile");
-            // Actualiza el usuario con la ruta de la imagen
-            Usuario usuario = usuarioService.findByName(nombre);
-            System.out.println(usuario.getNombre());
-            usuario.setPerfil(file.getOriginalFilename());
-            usuarioService.save(usuario);
-
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (IOException e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 
     @PutMapping("/usuario/cambiarPword")
     public ResponseEntity<?> editPword(@RequestBody Usuario updatedUsuario) {

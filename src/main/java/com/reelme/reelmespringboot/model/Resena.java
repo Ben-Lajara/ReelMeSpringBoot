@@ -11,10 +11,13 @@ import java.util.List;
 public class Resena {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private Date fecha;
     private float calificacion;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String comentario;
     private boolean gustado;
     private boolean spoiler;
@@ -39,7 +42,7 @@ public class Resena {
     public Resena() {
     }
 
-    public Resena(int id, Date fecha, float calificacion, String comentario, boolean gustado, Pelicula idPelicula, Usuario nomUsuario) {
+    public Resena(Long id, Date fecha, float calificacion, String comentario, boolean gustado, Pelicula idPelicula, Usuario nomUsuario) {
         this.id = id;
         this.fecha = fecha;
         this.calificacion = calificacion;
@@ -68,11 +71,11 @@ public class Resena {
         this.spoiler = spoiler;
     }
 
-    public int getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

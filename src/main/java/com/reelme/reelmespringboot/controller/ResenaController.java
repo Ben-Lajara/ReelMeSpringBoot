@@ -316,9 +316,7 @@ public class ResenaController {
             return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
         }
         Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-        if (peliculaId.isEmpty()) {
-            //return new ResponseEntity<>(Collections.singletonMap("error", "Movie not found"), HttpStatus.NOT_FOUND);
-        }
+        // No se comprueba que exista la película para evitar errores al buscar películas que no están en la base de datos
 
         Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioFound, peliculaId);
         if(resena == null){
@@ -342,13 +340,8 @@ public class ResenaController {
     @GetMapping("/reviewed/{idPelicula}")
     public ResponseEntity<?> getResenasPublicas(@PathVariable String idPelicula) {
         Optional<Pelicula> peliculaId = peliculaService.findById(idPelicula);
-        //if (peliculaId.isEmpty()) {
-            //return new ResponseEntity<>(Collections.singletonMap("message", "No reviews found"), HttpStatus.NO_CONTENT);
-        //} else {
             List<Resena> resenas = resenaService.findByIdPelicula(peliculaId);
             return ResponseEntity.ok(resenas);
-
-        //}
     }
 
     @GetMapping("/{usuario}/reviewed")
@@ -374,7 +367,7 @@ public class ResenaController {
     }
 
     @GetMapping("/reviewed")
-    public ResponseEntity<?> getResena(@RequestParam int id) {
+    public ResponseEntity<?> getResena(@RequestParam Long id) {
         Resena resena = resenaService.findById(id);
         if (resena == null) {
             return new ResponseEntity<>(Collections.singletonMap("message", "No review found"), HttpStatus.NO_CONTENT);

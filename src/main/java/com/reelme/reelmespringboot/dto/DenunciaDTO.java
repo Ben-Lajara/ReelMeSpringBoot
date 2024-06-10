@@ -1,37 +1,28 @@
-package com.reelme.reelmespringboot.model;
+package com.reelme.reelmespringboot.dto;
 
-import jakarta.persistence.*;
-import org.apache.catalina.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Transient;
 
-@Entity
-public class Denuncia {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class DenunciaDTO {
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "denunciante", referencedColumnName = "nombre")
-    private Usuario denunciante;
+    private String denunciante;
 
-    @ManyToOne
-    @JoinColumn(name = "denunciado", referencedColumnName = "nombre")
-    private Usuario denunciado;
+    private String denunciado;
 
     @Column(length = 10000)
     private String motivo;
 
-    @ManyToOne
-    @JoinColumn(name = "id_resena")
-    private Resena idResena;
+    private Long idResena;
 
     @Transient
     private String comentarioResena;
 
     private String estado;
-    public Denuncia() {
+    public DenunciaDTO() {
     }
 
-    public Denuncia(Usuario denunciante, Usuario denunciado, String motivo, Resena idResena) {
+    public DenunciaDTO(String denunciante, String denunciado, String motivo, Long idResena) {
         this.denunciante = denunciante;
         this.denunciado = denunciado;
         this.motivo = motivo;
@@ -46,19 +37,19 @@ public class Denuncia {
         this.id = id;
     }
 
-    public Usuario getDenunciante() {
+    public String getDenunciante() {
         return denunciante;
     }
 
-    public void setDenunciante(Usuario denunciante) {
+    public void setDenunciante(String denunciante) {
         this.denunciante = denunciante;
     }
 
-    public Usuario getDenunciado() {
+    public String getDenunciado() {
         return denunciado;
     }
 
-    public void setDenunciado(Usuario denunciado) {
+    public void setDenunciado(String denunciado) {
         this.denunciado = denunciado;
     }
 
@@ -70,11 +61,11 @@ public class Denuncia {
         this.motivo = motivo;
     }
 
-    public Resena getIdResena() {
+    public Long getIdResena() {
         return idResena;
     }
 
-    public void setIdResena(Resena idResena) {
+    public void setIdResena(Long idResena) {
         this.idResena = idResena;
     }
 

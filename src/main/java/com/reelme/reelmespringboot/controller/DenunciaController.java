@@ -1,5 +1,6 @@
 package com.reelme.reelmespringboot.controller;
 
+import com.reelme.reelmespringboot.dto.DenunciaDTO;
 import com.reelme.reelmespringboot.model.Denuncia;
 import com.reelme.reelmespringboot.model.Pelicula;
 import com.reelme.reelmespringboot.model.Resena;
@@ -14,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.swing.text.html.Option;
+import java.util.stream.Collectors;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -33,11 +36,37 @@ public class DenunciaController {
     @Autowired
     private PeliculaService peliculaService;
 
+    private DenunciaDTO convertToDTO(Denuncia denuncia) {
+        DenunciaDTO dto = new DenunciaDTO();
+        dto.setId(denuncia.getId());
+        dto.setDenunciante(denuncia.getDenunciante().getNombre());
+        dto.setDenunciado(denuncia.getDenunciado().getNombre());
+        dto.setMotivo(denuncia.getMotivo());
+        dto.setIdResena(denuncia.getIdResena().getId());
+        dto.setComentarioResena(denuncia.getIdResena().getComentario());
+        dto.setEstado(denuncia.getEstado());
+        return dto;
+    }
+
+    private Denuncia convertToEntity(DenunciaDTO dto) {
+        Denuncia denuncia = new Denuncia();
+        denuncia.setId(dto.getId());
+        denuncia.setDenunciante(usuarioService.findByName(dto.getDenunciante()));
+        denuncia.setDenunciado(usuarioService.findByName(dto.getDenunciado()));
+        denuncia.setMotivo(dto.getMotivo());
+        denuncia.setIdResena(resenaService.findById(dto.getIdResena()));
+        denuncia.setEstado(dto.getEstado());
+        return denuncia;
+    }
+
     @GetMapping("/denuncias")
     public ResponseEntity<?> getDenuncias() {
         try {
             List<Denuncia> denuncias = denunciaService.findAll();
-            return ResponseEntity.ok(denuncias);
+            List<DenunciaDTO> denunciaDTOs = denuncias.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(denunciaDTOs);
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -47,11 +76,10 @@ public class DenunciaController {
     public ResponseEntity<?> getDenunciasRechazadas() {
         try {
             List<Denuncia> denuncias = denunciaService.findByEstadoLike("Rechazada");
-            for (Denuncia denuncia : denuncias) {
-                Resena resena = resenaService.findById(denuncia.getIdResena());
-                denuncia.setComentarioResena(resena.getComentario());
-            }
-            return ResponseEntity.ok(denuncias);
+            List<DenunciaDTO> denunciaDTOs = denuncias.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(denunciaDTOs);
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -61,11 +89,10 @@ public class DenunciaController {
     public ResponseEntity<?> getDenunciasPendientes() {
         try {
             List<Denuncia> denuncias = denunciaService.findByEstadoIsNull();
-            for (Denuncia denuncia : denuncias) {
-                Resena resena = resenaService.findById(denuncia.getIdResena());
-                denuncia.setComentarioResena(resena.getComentario());
-            }
-            return ResponseEntity.ok(denuncias);
+            List<DenunciaDTO> denunciaDTOs = denuncias.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(denunciaDTOs);
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -75,11 +102,10 @@ public class DenunciaController {
     public ResponseEntity<?> getDenunciasAceptadas() {
         try {
             List<Denuncia> denuncias = denunciaService.findByEstadoLike("Aceptada");
-            for (Denuncia denuncia : denuncias) {
-                Resena resena = resenaService.findById(denuncia.getIdResena());
-                denuncia.setComentarioResena(resena.getComentario());
-            }
-            return ResponseEntity.ok(denuncias);
+            List<DenunciaDTO> denunciaDTOs = denuncias.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(denunciaDTOs);
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -88,14 +114,18 @@ public class DenunciaController {
     @PostMapping("/denuncias/denunciar")
     public ResponseEntity<?> denunciar(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula, @RequestParam String motivo) {
         try {
+            Usuario usuarioDenunciante = usuarioService.findByName(denunciante);
             Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
-            Optional<Pelicula> peliculaDenunciada = peliculaService.findById(idPelicula);
-            if (usuarioDenunciado != null && peliculaDenunciada.isPresent()) {
-                Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciado, peliculaDenunciada);
-                int idResena = resena.getId();
-                Denuncia denuncia = new Denuncia(denunciante, denunciado, motivo, idResena);
+            Optional<Pelicula> pelicula = peliculaService.findById(idPelicula);
+            System.out.println("Pelicula" + pelicula.get().getTitulo()  + " " + pelicula.get().getId());
+
+            if (usuarioDenunciante != null && usuarioDenunciado != null && pelicula.isPresent()) {
+                Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciado, pelicula);
+                System.out.println("Resena" + resena.getComentario() + " " + resena.getId());
+                Denuncia denuncia = new Denuncia(usuarioDenunciante, usuarioDenunciado, motivo, resena);
                 denunciaService.save(denuncia);
-                return new ResponseEntity<>(HttpStatus.OK);
+                DenunciaDTO denunciaDTO = convertToDTO(denuncia);
+                return ResponseEntity.ok(denunciaDTO);
             } else {
                 return new ResponseEntity<>(Collections.singletonMap("error", "User or movie not found"), HttpStatus.NOT_FOUND);
             }
@@ -107,15 +137,17 @@ public class DenunciaController {
     @GetMapping("/denuncias/existente")
     public ResponseEntity<?> denunciaExistente(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula) {
         try {
+            Usuario usuarioDenunciante = usuarioService.findByName(denunciante);
             Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
-            Optional<Pelicula> peliculaDenunciada = peliculaService.findById(idPelicula);
-            if (usuarioDenunciado != null && peliculaDenunciada.isPresent()) {
-                Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciado, peliculaDenunciada);
-                int idResena = resena.getId();
-                Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(denunciante, denunciado, idResena);
-                return ResponseEntity.ok(denuncia);
+            Optional<Pelicula> pelicula = peliculaService.findById(idPelicula);
+            Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciante, pelicula);
+
+            if (usuarioDenunciante != null && usuarioDenunciado != null && resena != null) {
+                Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(usuarioDenunciante, usuarioDenunciado, resena);
+                DenunciaDTO denunciaDTO = convertToDTO(denuncia);
+                return ResponseEntity.ok(denunciaDTO);
             } else {
-                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(Collections.singletonMap("error", "User or movie not found"), HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -123,16 +155,20 @@ public class DenunciaController {
     }
 
     @PutMapping("/rechazarDenuncia")
-    public ResponseEntity<?> rechazarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam int idResena) {
+    public ResponseEntity<?> rechazarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam Long idResena) {
         try {
+            Usuario usuarioDenunciante = usuarioService.findByName(denunciante);
             Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
-            if (usuarioDenunciado != null) {
-                Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(denunciante, denunciado, idResena);
+            Resena resena = resenaService.findById(idResena);
+
+            if (usuarioDenunciante != null && usuarioDenunciado != null && resena != null) {
+                Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(usuarioDenunciante, usuarioDenunciado, resena);
                 denuncia.setEstado("Rechazada");
                 denunciaService.save(denuncia);
-                return ResponseEntity.ok(denuncia);
+                DenunciaDTO denunciaDTO = convertToDTO(denuncia);
+                return ResponseEntity.ok(denunciaDTO);
             } else {
-                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(Collections.singletonMap("error", "User or movie not found"), HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -140,17 +176,20 @@ public class DenunciaController {
     }
 
     @PutMapping("/aceptarDenuncia")
-    public ResponseEntity<?> aceptarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam int idResena) {
+    public ResponseEntity<?> aceptarDenuncia(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam Long idResena) {
         try {
-            Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(denunciante, denunciado, idResena);
-            if (denuncia != null) {
+            Usuario usuarioDenunciante = usuarioService.findByName(denunciante);
+            Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
+            Resena resena = resenaService.findById(idResena);
+
+            if (usuarioDenunciante != null && usuarioDenunciado != null && resena != null) {
+                Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(usuarioDenunciante, usuarioDenunciado, resena);
                 denuncia.setEstado("Aceptada");
-                Resena resena = resenaService.findById(denuncia.getIdResena());
                 resena.setDenunciada(true);
                 denunciaService.save(denuncia);
                 return new ResponseEntity<>(HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(Collections.singletonMap("error", "Denunciation not found"), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(Collections.singletonMap("error", "User or movie not found"), HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);

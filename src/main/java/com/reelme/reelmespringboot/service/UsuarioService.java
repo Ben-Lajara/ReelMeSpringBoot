@@ -75,7 +75,7 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
     }
 
-    @Scheduled(fixedRate = 600000)
+    /*@Scheduled(fixedRate = 600000)
     public void quitarVetos() {
         List<Usuario> usuarios = usuarioRepository.findAllByVetoIsNotNull();
         Date ahora = new Date();
@@ -85,5 +85,5 @@ public class UsuarioService {
                 usuarioRepository.save(usuario);
             }
         }
-    }
+    }*/
 }
