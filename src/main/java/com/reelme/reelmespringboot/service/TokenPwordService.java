@@ -13,9 +13,9 @@ public class TokenPwordService {
     @Autowired
     private TokenPwordRepository tokenPwordRepository;
 
-    /*@Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = 300000)
     @Transactional
     public void borrarTokensExpirados() {
         tokenPwordRepository.deleteByFechaExpiracionBefore(new Date());
-    }*/
+    }
 }
