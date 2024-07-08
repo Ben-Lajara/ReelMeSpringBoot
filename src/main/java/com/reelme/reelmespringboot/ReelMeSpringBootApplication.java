@@ -1,10 +1,7 @@
 package com.reelme.reelmespringboot;
 
 import com.reelme.reelmespringboot.model.*;
-import com.reelme.reelmespringboot.repository.PeliculaRepository;
-import com.reelme.reelmespringboot.repository.ResenaRepository;
-import com.reelme.reelmespringboot.repository.RevisionadoRepository;
-import com.reelme.reelmespringboot.repository.RolRepository;
+import com.reelme.reelmespringboot.repository.*;
 import com.reelme.reelmespringboot.service.RolService;
 import com.reelme.reelmespringboot.service.UsuarioService;
 import jakarta.annotation.PostConstruct;
@@ -50,6 +47,9 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 
 	@Autowired
 	private RevisionadoRepository revisionadoRepository;
+
+	@Autowired
+	private DenunciaRepository denunciaRepository;
 
 	public static void main(String[] args) {
 		SpringApplication.run(ReelMeSpringBootApplication.class, args);
@@ -472,6 +472,7 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		resenaRubenSpiderMan.setComentario("Me gusta más que las siguientes");
 		resenaRubenSpiderMan.setGustado(true);
 		resenaRubenSpiderMan.setFecha(new Date("2024/02/16"));
+		resenaRepository.save(resenaRubenSpiderMan);
 
 		Resena resenaRubenElRetornoDelJedi = new Resena();
 		resenaRubenElRetornoDelJedi.setIdPelicula(elRetornoDelJedi);
@@ -480,6 +481,7 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		resenaRubenElRetornoDelJedi.setComentario("La mejor es la anterior pero sigue estando bien");
 		resenaRubenElRetornoDelJedi.setGustado(true);
 		resenaRubenElRetornoDelJedi.setFecha(new Date("2024/02/22"));
+		resenaRepository.save(resenaRubenElRetornoDelJedi);
 
 		Resena resenaRubenGodzillaMinusOne = new Resena();
 		resenaRubenGodzillaMinusOne.setIdPelicula(godzillaMinusOne);
@@ -496,7 +498,7 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		resenaRubenAnatomiaDeUnaCaida.setCalificacion(5);
 		resenaRubenAnatomiaDeUnaCaida.setComentario("Se tenía que haber llevado el Óscar.");
 		resenaRubenAnatomiaDeUnaCaida.setGustado(true);
-		resenaRubenAnatomiaDeUnaCaida.setFecha(new Date("2024/05/12"));
+		resenaRubenAnatomiaDeUnaCaida.setFecha(new Date("2024/05/14"));
 		resenaRepository.save(resenaRubenAnatomiaDeUnaCaida);
 
 		Resena resenaRubenAsBestas = new Resena();
@@ -505,7 +507,7 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		resenaRubenAsBestas.setCalificacion(4);
 		resenaRubenAsBestas.setComentario("Una película muy interesante.");
 		resenaRubenAsBestas.setGustado(true);
-		resenaRubenAsBestas.setFecha(new Date("2024/05/12"));
+		resenaRubenAsBestas.setFecha(new Date("2024/05/13"));
 		resenaRepository.save(resenaRubenAsBestas);
 
 		Resena resenaRubenTheBatman = new Resena();
@@ -532,12 +534,14 @@ public class ReelMeSpringBootApplication implements WebMvcConfigurer{
 		denunciaValerioResenaDarioSpiderManNoWayHome.setDenunciado(darioCinefilo);
 		denunciaValerioResenaDarioSpiderManNoWayHome.setIdResena(resenaDarioSpiderManNoWayHome);
 		denunciaValerioResenaDarioSpiderManNoWayHome.setMotivo("Contenido inapropiado");
+		denunciaRepository.save(denunciaValerioResenaDarioSpiderManNoWayHome);
 
 		Denuncia denunciaRubenResenaEliResplandor = new Denuncia();
 		denunciaRubenResenaEliResplandor.setDenunciante(rubenLovesMovies);
 		denunciaRubenResenaEliResplandor.setDenunciado(eliCinefila);
 		denunciaRubenResenaEliResplandor.setIdResena(resenaEliElResplandor);
 		denunciaRubenResenaEliResplandor.setMotivo("Está siendo grosera.");
+		denunciaRepository.save(denunciaRubenResenaEliResplandor);
 
 	}
 
