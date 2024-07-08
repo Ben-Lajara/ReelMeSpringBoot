@@ -3,6 +3,7 @@ package com.reelme.reelmespringboot.service;
 import com.reelme.reelmespringboot.model.Pelicula;
 import com.reelme.reelmespringboot.model.Resena;
 import com.reelme.reelmespringboot.model.Usuario;
+import com.reelme.reelmespringboot.model.UsuariosSeguidos;
 import com.reelme.reelmespringboot.repository.ResenaRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -48,14 +49,6 @@ public class ResenaService {
         return resenaRepository.countByNomUsuario(usuario);
     }
 
-    /*public List<Resena> findTop4ByUsuarioOrderByFechaDesc(Usuario usuario) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Resena> query = cb.createQuery(Resena.class);
-        Root<Resena> root = query.from(Resena.class);
-        query.select(root).where(cb.equal(root.get("nomUsuario"), usuario)).orderBy(cb.desc(root.get("fecha")));
-        return entityManager.createQuery(query).setMaxResults(4).getResultList();
-    }*/
-
     public List<Resena> findTop4ByUsuarioOrderByLatestActivityDesc(Usuario usuario) {
         List<Resena> resenas = findByUsuario(usuario);
         resenas.sort((r1, r2) -> {
@@ -70,6 +63,7 @@ public class ResenaService {
 
         return resenas.size() > 4 ? resenas.subList(0, 4) : resenas;
     }
+
 
     public int countByFechaBetweenAndNomUsuario(Date dateStart, Date dateEnd, Usuario usuario) {
         return resenaRepository.countByFechaBetweenAndNomUsuario(dateStart, dateEnd, usuario);

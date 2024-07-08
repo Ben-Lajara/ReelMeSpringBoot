@@ -1,5 +1,6 @@
 package com.reelme.reelmespringboot.controller;
 
+import com.reelme.reelmespringboot.dto.AboutDTO;
 import com.reelme.reelmespringboot.model.*;
 import com.reelme.reelmespringboot.repository.RolRepository;
 import com.reelme.reelmespringboot.repository.UsuariosSeguidosRepository;
@@ -68,7 +69,13 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/usuario/delete")
-    public ResponseEntity<?> delete(@RequestParam String pword, @RequestParam String nombre) {
+    public ResponseEntity<?> delete(@RequestParam String pword, @RequestParam String nombre, @RequestHeader("Authorization") String token){
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+        }
         Usuario existingUser = usuarioService.findByName(nombre);
         System.out.println("Usuario encontrado: " + existingUser.getNombre());
         System.out.println("pword: " + pword);
@@ -118,7 +125,13 @@ public class UsuarioController {
     }
 
     @PutMapping("/usuario/perfil")
-    public ResponseEntity<?> setPerfil(@RequestParam String nombre, @RequestParam String perfil) {
+    public ResponseEntity<?> setPerfil(@RequestParam String nombre, @RequestParam String perfil, @RequestHeader("Authorization") String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+            return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+        }
         Usuario usuario = usuarioService.findByName(nombre);
         if (usuario != null) {
             usuario.setPerfil(perfil);
@@ -224,7 +237,7 @@ public class UsuarioController {
     }
 
     @GetMapping("/usuario/about/{usuario}")
-    public ResponseEntity<Map<String, Object>> getAbout(@PathVariable String usuario){
+    public ResponseEntity<?> getAbout(@PathVariable String usuario){
         try {
             Usuario usuarioFound = usuarioService.findByName(usuario);
             if (usuarioFound == null) {
@@ -236,18 +249,7 @@ public class UsuarioController {
 
                 calendar.set(Calendar.DAY_OF_YEAR, calendar.getActualMaximum(Calendar.DAY_OF_YEAR));
                 Date end = calendar.getTime();
-                Map<String, Object> about = new HashMap<>();
-                about.put("nombre", usuarioFound.getNombre());
-                about.put("apodo", usuarioFound.getApodo());
-                about.put("direccion", usuarioFound.getDireccion());
-                about.put("perfil", usuarioFound.getPerfil());
-                about.put("color", usuarioFound.getColor());
-                about.put("bio", usuarioFound.getBio());
-                about.put("vistas", resenaService.countByUsuario(usuarioFound));
-                about.put("vistasYear", resenaService.countByFechaBetweenAndNomUsuario(start, end, usuarioFound));
-                about.put("seguidores", usuariosSeguidosService.countByUsuarioSeguido(usuarioFound));
-                about.put("seguidos", usuariosSeguidosService.countByNombreUsuario(usuarioFound));
-                about.put("rango", usuarioFound.getRango());
+                AboutDTO about = new AboutDTO(usuarioFound.getNombre(), usuarioFound.getApodo(), usuarioFound.getDireccion(), usuarioFound.getPerfil(), usuarioFound.getColor(), usuarioFound.getBio(), resenaService.countByUsuario(usuarioFound), resenaService.countByFechaBetweenAndNomUsuario(start, end, usuarioFound), usuariosSeguidosService.countByUsuarioSeguido(usuarioFound), usuariosSeguidosService.countByNombreUsuario(usuarioFound), usuarioFound.getRango());
                 return ResponseEntity.ok(about);
             }
         }catch (Exception e){
@@ -269,28 +271,44 @@ public class UsuarioController {
         }
     }
 
+    @PutMapping("usuario/cambiarPword")
+    public ResponseEntity<?> editPword(@RequestParam String nombre, @RequestParam String pword, @RequestParam String pword2, @RequestHeader("Authorization") String token){
+        try{
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+            }
+            Usuario usuario = usuarioService.findByName(nombre);
+            System.out.println("Usuario encontrado: " + usuario.getNombre() + " " + usuario.getPword());
+            if(usuario != null){
+                if(BCrypt.checkpw(pword, usuario.getPword())){
+                    String pwordHash = BCrypt.hashpw(pword2, BCrypt.gensalt());
+                    usuario.setPword(pwordHash);
+                    usuarioService.save(usuario);
+                    return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+                }else{
+                    return new ResponseEntity<>(Collections.singletonMap("error", "Incorrect password"), HttpStatus.UNAUTHORIZED);
+                }
 
-
-    @PutMapping("/usuario/cambiarPword")
-    public ResponseEntity<?> editPword(@RequestBody Usuario updatedUsuario) {
-        try {
-            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
-            if (existingUsuario != null) {
-                String pwordHash = BCrypt.hashpw(updatedUsuario.getPword(), BCrypt.gensalt());
-                existingUsuario.setPword(pwordHash);
-                usuarioService.save(existingUsuario);
-                return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
-            } else {
+            }else{
                 return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
-        } catch (Exception e) {
+        }catch (Exception e){
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("/usuario/numResenas/{nombre}")
-    public ResponseEntity<?> getNumResenas(@PathVariable String nombre){
+    public ResponseEntity<?> getNumResenas(@PathVariable String nombre, @RequestHeader("Authorization") String token){
         try {
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+            }
             Usuario usuario = usuarioService.findByName(nombre);
             if (usuario == null) {
                 return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
@@ -303,55 +321,42 @@ public class UsuarioController {
     }
 
     @PutMapping("/usuario/color")
-    public ResponseEntity<?> editColor(@RequestBody Usuario updatedUsuario) {
-        try {
-            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
-            if (existingUsuario != null) {
-                existingUsuario.setColor(updatedUsuario.getColor());
-                usuarioService.save(existingUsuario);
+    public ResponseEntity<?> editColor(@RequestParam String nombre, @RequestParam String color, @RequestHeader("Authorization") String token){
+        try{
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+            }
+            Usuario usuario = usuarioService.findByName(nombre);
+            if(usuario != null){
+                usuario.setColor(color);
+                usuarioService.save(usuario);
                 return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
-            } else {
+            }else{
                 return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }
-        } catch (Exception e) {
+        }catch (Exception e){
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PutMapping("/usuario/bio")
-    public ResponseEntity<?> editBio(@RequestBody Usuario updatedUsuario) {
-        try {
-            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
-            if (existingUsuario != null) {
-                existingUsuario.setBio(updatedUsuario.getBio());
-                usuarioService.save(existingUsuario);
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "success");
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                Map<String, String> response = new HashMap<>();
-                response.put("status", "error");
-                response.put("message", "Usuario not found");
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "error");
-            response.put("message", e.getMessage());
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     @PutMapping("/usuario")
-    public ResponseEntity<?> editUsuario(@RequestBody Usuario updatedUsuario){
+    public ResponseEntity<?> editUsuario(@RequestParam String nombre, @RequestParam(required = false) String email, @RequestParam(required = false) String apodo, @RequestParam(required = false) String direccion, @RequestParam(required = false) String bio, @RequestHeader("Authorization") String token){
         try {
-            Usuario existingUsuario = usuarioService.findByName(updatedUsuario.getNombre());
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+            }
+            Usuario existingUsuario = usuarioService.findByName(nombre);
             if (existingUsuario != null) {
-                existingUsuario.setEmail(updatedUsuario.getEmail());
-                existingUsuario.setPerfil(updatedUsuario.getPerfil());
-                existingUsuario.setBio(updatedUsuario.getBio());
-                existingUsuario.setApodo(updatedUsuario.getApodo());
-                existingUsuario.setDireccion(updatedUsuario.getDireccion());
+                existingUsuario.setEmail(email != null && !email.isEmpty() ? email : null);
+                existingUsuario.setApodo(apodo != null && !apodo.isEmpty() ? apodo : null);
+                existingUsuario.setDireccion(direccion != null && !direccion.isEmpty() ? direccion : null);
+                existingUsuario.setBio(bio != null && !bio.isEmpty() ? bio : null);
                 usuarioService.save(existingUsuario);
                 return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
             } else {
@@ -363,8 +368,15 @@ public class UsuarioController {
     }
 
     @PutMapping("/usuario/vetar")
-    public ResponseEntity<?> vetar(@RequestParam String nombre, @RequestParam String duracionString) throws Exception{
+    public ResponseEntity<?> vetar(@RequestParam String nombre, @RequestParam String duracionString, @RequestHeader("Authorization") String token) throws Exception{
         try {
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            List<String> roles = jwtTokenProviderService.getRolesFromJwt(token);
+            if (!roles.contains("ROLE_ADMIN")) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "Unauthorized"), HttpStatus.UNAUTHORIZED);
+            }
             SimpleDateFormat formateador = new SimpleDateFormat("dd/MM/yyyy, HH:mm:ss");
             Date duracionVeto = formateador.parse(duracionString);
             Usuario usuario = usuarioService.findByName(nombre);
@@ -372,6 +384,38 @@ public class UsuarioController {
                 usuario.setVeto(duracionVeto);
                 usuarioService.save(usuario);
                 return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/usuario/comprobarVeto")
+    public ResponseEntity<?> comprobarVeto(@RequestParam String nombre, @RequestHeader("Authorization") String token){
+        try{
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            if (!nombre.equals(jwtTokenProviderService.getUsernameFromJwt(token))) {
+                return new ResponseEntity<>(Collections.singletonMap("error", "Invalid or expired token"), HttpStatus.UNAUTHORIZED);
+            }
+            Usuario usuario = usuarioService.findByName(nombre);
+            if (usuario != null) {
+                Date veto = usuario.getVeto();
+                if (veto != null) {
+                    Date now = new Date();
+                    if (now.after(veto)) {
+                        usuario.setVeto(null);
+                        usuarioService.save(usuario);
+                        return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity<>(Collections.singletonMap("status", "User is vetoed"), HttpStatus.OK);
+                    }
+                } else {
+                    return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+                }
             } else {
                 return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
             }

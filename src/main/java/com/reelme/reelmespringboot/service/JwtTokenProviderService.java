@@ -35,4 +35,14 @@ public class JwtTokenProviderService {
 
         return claims.getSubject();
     }
+
+    public List<String> getRolesFromJwt(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(clave)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return (List<String>) claims.get("roles");
+    }
 }

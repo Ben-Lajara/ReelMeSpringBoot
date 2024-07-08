@@ -1,6 +1,7 @@
 package com.reelme.reelmespringboot.controller;
 
 import com.reelme.reelmespringboot.dto.EntradaDiarioDTO;
+import com.reelme.reelmespringboot.dto.ResenaPublicaDTO;
 import com.reelme.reelmespringboot.model.Pelicula;
 import com.reelme.reelmespringboot.model.Resena;
 import com.reelme.reelmespringboot.model.Revisionado;
@@ -310,7 +311,7 @@ public class ResenaController {
     }
 
     @GetMapping("/reviewed/{usuario}/{idPelicula}")
-    public ResponseEntity<Map<String, Object>> getResenaPublica(@PathVariable String usuario, @PathVariable String idPelicula) {
+    public ResponseEntity<?> getResenaPublica(@PathVariable String usuario, @PathVariable String idPelicula) {
         Usuario usuarioFound = usuarioService.findByName(usuario);
         if (usuarioFound == null) {
             return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
@@ -322,18 +323,7 @@ public class ResenaController {
         if(resena == null){
             return new ResponseEntity<>(Collections.singletonMap("error", "Review not found"), HttpStatus.NOT_FOUND);
         }
-        Map<String, Object> resenaPublica = new HashMap<>();
-        resenaPublica.put("fecha", resena.getFecha());
-        resenaPublica.put("calificacion", resena.getCalificacion());
-        resenaPublica.put("comentario", resena.getComentario());
-        resenaPublica.put("gustado", resena.isGustado());
-        resenaPublica.put("spoiler", resena.isSpoiler());
-        resenaPublica.put("usuario", usuarioFound.getNombre());
-        resenaPublica.put("idPelicula", peliculaId.get().getId());
-        resenaPublica.put("titulo", peliculaId.get().getTitulo());
-        resenaPublica.put("year", peliculaId.get().getYear());
-        resenaPublica.put("foto", peliculaId.get().getFoto());
-        resenaPublica.put("revisionados", resena.getRevisionados());
+        ResenaPublicaDTO resenaPublica = new ResenaPublicaDTO(resena.getFecha(), resena.getComentario(), resena.getCalificacion(), resena.isGustado(), resena.isSpoiler(), usuarioFound.getNombre(), peliculaId.get().getId(), peliculaId.get().getTitulo(), peliculaId.get().getYear(), peliculaId.get().getFoto(), resena.getRevisionados(), resena.isDenunciada());
         return ResponseEntity.ok(resenaPublica);
     }
 

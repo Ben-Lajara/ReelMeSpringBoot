@@ -138,9 +138,13 @@ public class DenunciaController {
     public ResponseEntity<?> denunciaExistente(@RequestParam String denunciante, @RequestParam String denunciado, @RequestParam String idPelicula) {
         try {
             Usuario usuarioDenunciante = usuarioService.findByName(denunciante);
+            System.out.println("Usuario denunciante" + usuarioDenunciante.getNombre());
             Usuario usuarioDenunciado = usuarioService.findByName(denunciado);
+            System.out.println("Usuario denunciado" + usuarioDenunciado.getNombre());
             Optional<Pelicula> pelicula = peliculaService.findById(idPelicula);
-            Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciante, pelicula);
+            System.out.println("Pelicula" + pelicula.get().getTitulo()  + " " + pelicula.get().getId());
+            Resena resena = resenaService.findByUsuarioAndIdPelicula(usuarioDenunciado, pelicula);
+            System.out.println("Resena" + resena.getComentario() + " " + resena.getId());
 
             if (usuarioDenunciante != null && usuarioDenunciado != null && resena != null) {
                 Denuncia denuncia = denunciaService.findByDenuncianteAndDenunciadoAndIdResena(usuarioDenunciante, usuarioDenunciado, resena);
