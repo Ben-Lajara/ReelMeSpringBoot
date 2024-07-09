@@ -323,7 +323,7 @@ public class ResenaController {
         if(resena == null){
             return new ResponseEntity<>(Collections.singletonMap("error", "Review not found"), HttpStatus.NOT_FOUND);
         }
-        ResenaPublicaDTO resenaPublica = new ResenaPublicaDTO(resena.getFecha(), resena.getComentario(), resena.getCalificacion(), resena.isGustado(), resena.isSpoiler(), usuarioFound.getNombre(), peliculaId.get().getId(), peliculaId.get().getTitulo(), peliculaId.get().getYear(), peliculaId.get().getFoto(), resena.getRevisionados(), resena.isDenunciada());
+        ResenaPublicaDTO resenaPublica = new ResenaPublicaDTO(resena.getFecha(), resena.getComentario(), resena.getCalificacion(), resena.isGustado(), resena.isSpoiler(), usuarioFound.getNombre(), usuarioFound.getPerfil(), peliculaId.get().getId(), peliculaId.get().getTitulo(), peliculaId.get().getYear(), peliculaId.get().getFoto(), resena.getRevisionados(), resena.isDenunciada());
         return ResponseEntity.ok(resenaPublica);
     }
 

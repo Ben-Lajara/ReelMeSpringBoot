@@ -12,6 +12,7 @@ public class ResenaPublicaDTO {
     public boolean gustado;
     public boolean spoiler;
     public String usuario;
+    public String perfil;
     public String idPelicula;
     public String titulo;
     public String year;
@@ -22,13 +23,14 @@ public class ResenaPublicaDTO {
     public ResenaPublicaDTO() {
     }
 
-    public ResenaPublicaDTO(Date fecha, String comentario, float calificacion, boolean gustado, boolean spoiler, String usuario, String idPelicula, String titulo, String year, String foto, List<Revisionado> revisionados, boolean denunciada) {
+    public ResenaPublicaDTO(Date fecha, String comentario, float calificacion, boolean gustado, boolean spoiler, String usuario, String perfil, String idPelicula, String titulo, String year, String foto, List<Revisionado> revisionados, boolean denunciada) {
         this.fecha = fecha;
         this.comentario = comentario;
         this.calificacion = calificacion;
         this.gustado = gustado;
         this.spoiler = spoiler;
         this.usuario = usuario;
+        this.perfil = perfil;
         this.idPelicula = idPelicula;
         this.titulo = titulo;
         this.year = year;
@@ -83,6 +85,14 @@ public class ResenaPublicaDTO {
 
     public void setUsuario(String usuario) {
         this.usuario = usuario;
+    }
+
+    public String getPerfil() {
+        return perfil;
+    }
+
+    public void setPerfil(String perfil) {
+        this.perfil = perfil;
     }
 
     public String getIdPelicula() {
