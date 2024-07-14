@@ -3,6 +3,7 @@ package com.reelme.reelmespringboot.controller;
 import com.reelme.reelmespringboot.dto.AboutDTO;
 import com.reelme.reelmespringboot.model.*;
 import com.reelme.reelmespringboot.repository.RolRepository;
+import com.reelme.reelmespringboot.repository.TokenPwordRepository;
 import com.reelme.reelmespringboot.repository.UsuariosSeguidosRepository;
 import com.reelme.reelmespringboot.service.JwtTokenProviderService;
 import com.reelme.reelmespringboot.service.ResenaService;
@@ -49,6 +50,9 @@ public class UsuarioController {
 
     @Autowired
     private JwtTokenProviderService jwtTokenProviderService;
+
+    @Autowired
+    private TokenPwordRepository tokenPwordRepository;
 
     @PostMapping("/usuario/register")
     public ResponseEntity<?> register(@RequestBody Usuario usuario) {
@@ -299,6 +303,35 @@ public class UsuarioController {
             return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @PutMapping("usuario/resetPword")
+    public ResponseEntity<?> resetPword(@RequestParam String nombre, @RequestParam String pword, @RequestParam String pword2, @RequestParam String token){
+        try{
+            TokenPword tokenPword = tokenPwordRepository.findByToken(token);
+            System.out.println("Token encontrado: " + tokenPword.getToken() + " " + tokenPword.getEmail() + " " + tokenPword.getFechaExpiracion());
+            if(tokenPword == null){
+                return new ResponseEntity<>(Collections.singletonMap("error", "Invalid token"), HttpStatus.UNAUTHORIZED);
+            }
+            Usuario usuario = usuarioService.findByName(nombre);
+            System.out.println("Usuario encontrado: " + usuario.getNombre() + " " + usuario.getPword());
+            if(usuario != null){
+                if(usuario == usuarioService.findByEmail(tokenPword.getEmail())){
+                    String pwordHash = BCrypt.hashpw(pword2, BCrypt.gensalt());
+                    usuario.setPword(pwordHash);
+                    usuarioService.save(usuario);
+                    return new ResponseEntity<>(Collections.singletonMap("status", "success"), HttpStatus.OK);
+                }else{
+                    return new ResponseEntity<>(Collections.singletonMap("error", "Incorrect password"), HttpStatus.UNAUTHORIZED);
+                }
+
+            }else{
+                return new ResponseEntity<>(Collections.singletonMap("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+        }catch (Exception e){
+            return new ResponseEntity<>(Collections.singletonMap("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @GetMapping("/usuario/numResenas/{nombre}")
     public ResponseEntity<?> getNumResenas(@PathVariable String nombre, @RequestHeader("Authorization") String token){
